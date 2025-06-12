@@ -1,0 +1,503 @@
+// src/assets/styles/main.scss
+@import './variables';
+@import 'materialize-css/sass/materialize';
+
+// Global styles
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  background-color: #f5f5f5;
+}
+
+// =================================
+// DROPDOWN FIXES - MATERIALIZE
+// =================================
+/* Force Materialize Dropdown to work properly */
+.dropdown-content {
+  min-width: 200px !important;
+  z-index: 99999 !important;
+  position: absolute !important;
+  background: white !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+  border-radius: 4px !important;
+  
+  /* HIDE BY DEFAULT */
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: scaleY(0) !important;
+  transform-origin: top right !important;
+  transition: all 0.3s ease !important;
+  display: none !important;
+  
+  /* SHOW when Materialize opens it - multiple conditions */
+  &.open,
+  &[style*="display: block"],
+  &[style*="opacity: 1"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: scaleY(1) !important;
+    display: block !important;
+  }
+  
+  li {
+    min-height: auto !important;
+    
+    a {
+      color: #424242 !important;
+      padding: 14px 16px !important;
+      display: block !important;
+      text-decoration: none !important;
+      font-size: 14px !important;
+      
+      &:hover {
+        background-color: #f5f5f5 !important;
+        color: #424242 !important;
+      }
+    }
+  }
+  
+  .divider {
+    height: 1px !important;
+    background-color: #e0e0e0 !important;
+    margin: 8px 0 !important;
+  }
+}
+
+/* Specific fix for user dropdown positioning */
+#user-dropdown {
+  position: absolute !important;
+  top: calc(100% + 5px) !important; /* 5px gap below user button */
+  right: 0 !important;
+  left: auto !important;
+  display: none !important;
+  margin: 0 !important; /* Remove any default margins */
+  
+  /* Show when opened by Materialize or manual trigger */
+  &.open,
+  &.show,
+  &[style*="display: block"],
+  &[style*="opacity: 1"] {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: scaleY(1) !important;
+  }
+}
+
+/* Ensure parent li has relative positioning for dropdown placement */
+.dropdown-trigger {
+  cursor: pointer !important;
+  position: relative !important; /* Important for dropdown positioning */
+  
+  &:focus {
+    outline: none !important;
+  }
+  
+  /* Add visual feedback when clicking */
+  &:active {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+}
+
+/* Make sure the li containing dropdown trigger has relative position */
+.nav-wrapper ul li {
+  position: relative !important;
+}
+
+/* Fix any potential overflow issues */
+.nav-wrapper .container {
+  overflow: visible !important;
+}
+
+.nav-wrapper {
+  overflow: visible !important;
+}
+
+nav {
+  overflow: visible !important;
+}
+
+/* Manual click fallback - show dropdown on click if Materialize fails */
+.dropdown-trigger.clicked + .dropdown-content,
+.dropdown-trigger[aria-expanded="true"] + .dropdown-content {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: scaleY(1) !important;
+  display: block !important;
+}
+
+/* Mobile responsive dropdown */
+@media (max-width: 768px) {
+  .dropdown-content {
+    position: fixed !important;
+    top: 64px !important;
+    right: 10px !important;
+    left: 10px !important;
+    width: auto !important;
+    min-width: auto !important;
+  }
+}
+
+// =================================
+// END DROPDOWN FIXES
+// =================================
+
+// Utility classes
+.mt-1 { margin-top: $spacing-xs; }
+.mt-2 { margin-top: $spacing-sm; }
+.mt-3 { margin-top: $spacing-md; }
+.mt-4 { margin-top: $spacing-lg; }
+.mt-5 { margin-top: $spacing-xl; }
+
+.mb-1 { margin-bottom: $spacing-xs; }
+.mb-2 { margin-bottom: $spacing-sm; }
+.mb-3 { margin-bottom: $spacing-md; }
+.mb-4 { margin-bottom: $spacing-lg; }
+.mb-5 { margin-bottom: $spacing-xl; }
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+
+// Card styles
+.custom-card {
+  background: white;
+  border-radius: $border-radius-md;
+  box-shadow: $shadow-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: $shadow-lg;
+  }
+}
+
+// Form styles
+.form-group {
+  margin-bottom: $spacing-lg;
+}
+
+// Button styles
+.btn-primary {
+  background-color: $primary-color !important;
+  &:hover {
+    background-color: darken($primary-color, 10%) !important;
+  }
+}
+
+.btn-secondary {
+  background-color: $secondary-color !important;
+  &:hover {
+    background-color: darken($secondary-color, 10%) !important;
+  }
+}
+
+// Product grid
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: $spacing-lg;
+  
+  @media (max-width: $mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Responsive utilities
+@media (max-width: $mobile) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: $tablet) {
+  .hide-on-desktop {
+    display: none !important;
+  }
+}
+
+// Loading animation
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+// Price formatting
+.price {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: $primary-color;
+}
+
+// Rating stars
+.rating {
+  display: inline-flex;
+  align-items: center;
+  
+  .material-icons {
+    color: #ffc107;
+    font-size: 18px;
+  }
+}
+
+// Status badges - Enhanced with more consistent styling
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  &.pending {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+  }
+  
+  &.processing {
+    background-color: #cce5ff;
+    color: #004085;
+    border: 1px solid #74b9ff;
+  }
+  
+  &.shipped {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #00b894;
+  }
+  
+  &.delivered {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #00cec9;
+  }
+  
+  &.cancelled {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #e17055;
+  }
+}
+
+// =================================
+// CHART.JS FIXES AND IMPROVEMENTS
+// =================================
+
+// Fix Chart.js canvas sizing issues
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+  
+  canvas {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    pointer-events: auto !important;
+  }
+}
+
+// Ensure charts are responsive
+canvas {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+// =================================
+// ADMIN DASHBOARD SPECIFIC FIXES
+// =================================
+
+.admin-dashboard {
+  // Fix stat cards layout and colors
+  .stat-card {
+    min-height: 120px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    // Ensure proper color inheritance
+    &.blue {
+      background: linear-gradient(135deg, #2196F3, #1976D2) !important;
+    }
+    
+    &.green {
+      background: linear-gradient(135deg, #4CAF50, #2E7D32) !important;
+    }
+    
+    &.orange {
+      background: linear-gradient(135deg, #FF9800, #F57C00) !important;
+    }
+    
+    &.purple {
+      background: linear-gradient(135deg, #9C27B0, #7B1FA2) !important;
+    }
+  }
+  
+  // Fix table responsiveness
+  .responsive-table {
+    overflow-x: auto;
+    
+    th, td {
+      padding: 12px 15px;
+      white-space: nowrap;
+    }
+    
+    @media (max-width: 768px) {
+      font-size: 0.875rem;
+      
+      th, td {
+        padding: 8px 10px;
+      }
+    }
+  }
+  
+  // Fix quick actions layout
+  .quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    
+    .btn {
+      justify-self: stretch;
+      text-align: center;
+      padding: 12px 24px;
+      
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+  
+  // Fix top products layout
+  .top-products {
+    max-height: 400px;
+    overflow-y: auto;
+    
+    .product-item {
+      &:hover {
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        margin: 0 -10px;
+        padding: 15px 10px;
+      }
+    }
+  }
+}
+
+// =================================
+// MATERIALIZE OVERRIDES
+// =================================
+
+// Fix button hover states
+.btn {
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+}
+
+// Fix card hover states
+.card {
+  transition: box-shadow 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+}
+
+// Fix navbar spacing
+.nav-wrapper {
+  padding: 0 20px;
+  
+  .brand-logo {
+    font-size: 1.8rem;
+    font-weight: 500;
+  }
+}
+
+// =================================
+// RESPONSIVE IMPROVEMENTS
+// =================================
+
+@media (max-width: 992px) {
+  .admin-dashboard {
+    .stat-card {
+      margin-bottom: 15px;
+    }
+    
+    .chart-container {
+      height: 250px;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    width: 95%;
+  }
+  
+  .admin-dashboard {
+    .custom-card {
+      padding: 15px;
+    }
+    
+    .card-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      
+      .btn-flat {
+        align-self: flex-end;
+      }
+    }
+  }
+}
+
+// =================================
+// ACCESSIBILITY IMPROVEMENTS
+// =================================
+
+// Focus states
+button:focus,
+.btn:focus,
+a:focus {
+  outline: 2px solid #2196F3;
+  outline-offset: 2px;
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .status-badge {
+    border-width: 2px;
+    font-weight: 600;
+  }
+  
+  .stat-card {
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
