@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   Body,
+  Patch,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { UsersService } from '../users/users.service';
@@ -49,12 +50,53 @@ export class AdminController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Query('status') status?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
-    return this.adminService.getOrders(page, limit, status);
+    return this.adminService.getOrders({
+      page,
+      limit,
+      status,
+      startDate,
+      endDate,
+    });
+  }
+
+  // 🆕 THÊM METHOD CẬP NHẬT TRẠNG THÁI ORDER
+  @Patch('orders/:id/status')
+  updateOrderStatus(
+    @Param('id') id: string,
+    @Body('status') status: string,
+  ) {
+    return this.adminService.updateOrderStatus(id, status);
   }
 
   @Post('users')
   createUser(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
+  }
+
+  // 🆕 THÊM ENDPOINT CHO PRODUCTS (THEO YÊU CẦU TÀI LIỆU)
+  @Get('products')
+  getAllProducts(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('search') search?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('sellerId') sellerId?: string,
+  ) {
+    return this.adminService.getAllProducts({
+      page,
+      limit,
+      search,
+      categoryId,
+      sellerId,
+    });
+  }
+
+  // 🆕 BULK DELETE (THEO YÊU CẦU: Thêm, sửa, xóa sản phẩm)
+  @Post('products/bulk-delete')
+  bulkDeleteProducts(@Body('productIds') productIds: string[]) {
+    return this.adminService.bulkDeleteProducts(productIds);
   }
 }

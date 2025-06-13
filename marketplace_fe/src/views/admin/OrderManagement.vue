@@ -1,21 +1,20 @@
-<!-- src/views/admin/OrderManagement.vue -->
 <template>
   <div class="container">
-    <h4>Order Management</h4>
+    <h4>Quản Lý Đơn Hàng</h4>
     
     <div class="row">
       <div class="col s12">
         <div class="filters">
           <div class="input-field inline">
             <select v-model="filters.status" @change="fetchOrders">
-              <option value="">All Orders</option>
-              <option value="PENDING">Pending</option>
-              <option value="PROCESSING">Processing</option>
-              <option value="SHIPPED">Shipped</option>
-              <option value="DELIVERED">Delivered</option>
-              <option value="CANCELLED">Cancelled</option>
+              <option value="">Tất Cả Đơn Hàng</option>
+              <option value="PENDING">Chờ Xử Lý</option>
+              <option value="PROCESSING">Đang Xử Lý</option>
+              <option value="SHIPPED">Đã Gửi</option>
+              <option value="DELIVERED">Đã Giao</option>
+              <option value="CANCELLED">Đã Hủy</option>
             </select>
-            <label>Status</label>
+            <label>Trạng Thái</label>
           </div>
           
           <div class="input-field inline">
@@ -24,7 +23,7 @@
               v-model="filters.startDate"
               @change="fetchOrders"
             >
-            <label>From Date</label>
+            <label>Từ Ngày</label>
           </div>
           
           <div class="input-field inline">
@@ -33,21 +32,22 @@
               v-model="filters.endDate"
               @change="fetchOrders"
             >
-            <label>To Date</label>
+            <label>Đến Ngày</label>
           </div>
           
           <button 
             class="btn-flat waves-effect"
             @click="resetFilters"
           >
-            Reset
+            <i class="material-icons left">refresh</i>
+            Đặt Lại
           </button>
         </div>
       </div>
     </div>
     
     <div v-if="loading" class="loading-spinner">
-      <LoadingSpinner text="Loading orders..." />
+      <LoadingSpinner text="Đang tải đơn hàng..." />
     </div>
     
     <div v-else>
@@ -56,34 +56,43 @@
         <table class="striped responsive-table">
           <thead>
             <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Date</th>
-              <th>Items</th>
-              <th>Total</th>
-              <th>Payment</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>Mã Đơn</th>
+              <th>Khách Hàng</th>
+              <th>Ngày Đặt</th>
+              <th>Sản Phẩm</th>
+              <th>Tổng Tiền</th>
+              <th>Thanh Toán</th>
+              <th>Trạng Thái</th>
+              <th>Thao Tác</th>
             </tr>
           </thead>
           <tbody>
+            <tr v-if="orders.length === 0">
+              <td colspan="8" class="center-align">
+                <p>Không có đơn hàng nào</p>
+              </td>
+            </tr>
             <tr v-for="order in orders" :key="order.id">
-              <td>#{{ order.id.slice(-8) }}</td>
+              <td>
+                <strong>#{{ order.id.slice(-8) }}</strong>
+              </td>
               <td>
                 <div class="customer-info">
-                  <strong>{{ order.user.name }}</strong>
-                  <p>{{ order.user.email }}</p>
+                  <strong>{{ order.user?.name || 'N/A' }}</strong>
+                  <p>{{ order.user?.email || '' }}</p>
                 </div>
               </td>
               <td>{{ formatDateTime(order.createdAt) }}</td>
-              <td>{{ order._count.items }} items</td>
-              <td>${{ order.totalAmount.toFixed(2) }}</td>
+              <td>{{ order._count?.items || 0 }} sản phẩm</td>
+              <td>
+                <strong>${{ order.totalAmount?.toFixed(2) || '0.00' }}</strong>
+              </td>
               <td>
                 <span 
                   class="payment-badge"
-                  :class="order.payment?.status.toLowerCase()"
+                  :class="getPaymentStatusClass(order.payment?.status)"
                 >
-                  {{ order.payment?.status || 'PENDING' }}
+                  {{ formatPaymentStatus(order.payment?.status) }}
                 </span>
               </td>
               <td>
@@ -92,11 +101,11 @@
                     :value="order.status"
                     @change="updateOrderStatus(order.id, $event.target.value)"
                   >
-                    <option value="PENDING">Pending</option>
-                    <option value="PROCESSING">Processing</option>
-                    <option value="SHIPPED">Shipped</option>
-                    <option value="DELIVERED">Delivered</option>
-                    <option value="CANCELLED">Cancelled</option>
+                    <option value="PENDING">Chờ Xử Lý</option>
+                    <option value="PROCESSING">Đang Xử Lý</option>
+                    <option value="SHIPPED">Đã Gửi</option>
+                    <option value="DELIVERED">Đã Giao</option>
+                    <option value="CANCELLED">Đã Hủy</option>
                   </select>
                 </div>
               </td>
@@ -104,7 +113,7 @@
                 <router-link 
                   :to="`/orders/${order.id}`"
                   class="btn-flat btn-small waves-effect"
-                  title="View Details"
+                  title="Xem Chi Tiết"
                 >
                   <i class="material-icons">visibility</i>
                 </router-link>
@@ -114,7 +123,7 @@
         </table>
         
         <!-- Pagination -->
-        <div class="center-align">
+        <div class="center-align" v-if="totalPages > 1">
           <ul class="pagination">
             <li :class="{ disabled: currentPage === 1 }">
               <a @click="changePage(currentPage - 1)">
@@ -123,7 +132,7 @@
             </li>
             
             <li 
-              v-for="page in totalPages" 
+              v-for="page in Math.min(totalPages, 10)" 
               :key="page"
               :class="{ active: page === currentPage }"
             >
@@ -140,32 +149,52 @@
       </div>
       
       <!-- Order Stats -->
-      <div class="row">
+      <div class="row" style="margin-top: 30px;">
         <div class="col s12 m3">
           <div class="stat-card custom-card">
-            <h6>Total Orders</h6>
-            <h5>{{ orderStats.total }}</h5>
+            <div class="stat-content">
+              <i class="material-icons">shopping_cart</i>
+              <div>
+                <h6>Tổng Đơn Hàng</h6>
+                <h5>{{ orderStats.total }}</h5>
+              </div>
+            </div>
           </div>
         </div>
         
         <div class="col s12 m3">
           <div class="stat-card custom-card">
-            <h6>Pending</h6>
-            <h5 class="orange-text">{{ orderStats.pending }}</h5>
+            <div class="stat-content">
+              <i class="material-icons orange-text">schedule</i>
+              <div>
+                <h6>Chờ Xử Lý</h6>
+                <h5 class="orange-text">{{ orderStats.pending }}</h5>
+              </div>
+            </div>
           </div>
         </div>
         
         <div class="col s12 m3">
           <div class="stat-card custom-card">
-            <h6>Processing</h6>
-            <h5 class="blue-text">{{ orderStats.processing }}</h5>
+            <div class="stat-content">
+              <i class="material-icons blue-text">settings</i>
+              <div>
+                <h6>Đang Xử Lý</h6>
+                <h5 class="blue-text">{{ orderStats.processing }}</h5>
+              </div>
+            </div>
           </div>
         </div>
         
         <div class="col s12 m3">
           <div class="stat-card custom-card">
-            <h6>Delivered</h6>
-            <h5 class="green-text">{{ orderStats.delivered }}</h5>
+            <div class="stat-content">
+              <i class="material-icons green-text">done</i>
+              <div>
+                <h6>Đã Giao</h6>
+                <h5 class="green-text">{{ orderStats.delivered }}</h5>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -175,250 +204,205 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useOrderStore } from '@/stores/order'
-import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
+import adminService from '@/services/admin.service'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
-import { formatDateTime, formatPaymentStatus } from '@/utils/formatters'
 
-// Add your component logic here (merge both script blocks if needed)
-const route = useRoute()
-const router = useRouter()
-const orderStore = useOrderStore()
-const authStore = useAuthStore()
 const toast = useToast()
 
-const orderId = computed(() => route.params.id)
-const order = computed(() => orderStore.currentOrder)
+// State
+const orders = ref([])
+const loading = ref(false)
+const currentPage = ref(1)
+const totalPages = ref(1)
 
-const orderStatuses = [
-  { value: 'PENDING', label: 'Order Placed', icon: 'shopping_cart' },
-  { value: 'PROCESSING', label: 'Processing', icon: 'settings' },
-  { value: 'SHIPPED', label: 'Shipped', icon: 'local_shipping' },
-  { value: 'DELIVERED', label: 'Delivered', icon: 'done' }
-]
-
-const canPerformActions = computed(() => {
-  return order.value?.userId === authStore.user?.id || authStore.isAdmin
+const filters = ref({
+  status: '',
+  startDate: '',
+  endDate: ''
 })
 
-const canCancel = computed(() => {
-  return order.value?.status === 'PENDING' || order.value?.status === 'PROCESSING'
-})
-
-const hasReviewed = ref(false) // TODO: Check if user has reviewed products
-
-const isStatusActive = (status) => {
-  return order.value?.status === status
-}
-
-const isStatusCompleted = (status) => {
-  const statusOrder = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
-  const currentIndex = statusOrder.indexOf(order.value?.status)
-  const checkIndex = statusOrder.indexOf(status)
-  return checkIndex <= currentIndex
-}
-
-const getStatusDate = (status) => {
-  // In real app, you'd track status change dates
-  if (status === 'PENDING') return order.value?.createdAt
-  return null
-}
-
-const goToReview = () => {
-  // Navigate to first product for review
-  const firstProduct = order.value.items[0]?.product
-  if (firstProduct) {
-    router.push(`/products/${firstProduct.id}#reviews`)
+// Computed
+const orderStats = computed(() => {
+  const stats = {
+    total: orders.value.length,
+    pending: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0
   }
-}
 
-const cancelOrder = async () => {
-  if (!confirm('Are you sure you want to cancel this order?')) return
+  orders.value.forEach(order => {
+    const status = order.status?.toLowerCase()
+    if (stats.hasOwnProperty(status)) {
+      stats[status]++
+    }
+  })
+
+  return stats
+})
+
+// Methods
+const fetchOrders = async () => {
+  loading.value = true
   
   try {
-    await orderStore.updateOrderStatus(orderId.value, 'CANCELLED')
-    toast.success('Order cancelled successfully')
+    const params = {
+      page: currentPage.value,
+      limit: 20,
+      ...filters.value
+    }
+    
+    console.log('Fetching orders with params:', params)
+    const response = await adminService.getAllOrders(params)
+    
+    orders.value = response.data.data || []
+    totalPages.value = response.data.meta?.totalPages || 1
+    
+    console.log(`Loaded ${orders.value.length} orders`)
   } catch (error) {
-    console.error('Error cancelling order:', error)
+    console.error('Error fetching orders:', error)
+    toast.error('Không thể tải danh sách đơn hàng')
+  } finally {
+    loading.value = false
   }
 }
 
-const downloadInvoice = () => {
-  toast.info('Invoice download coming soon')
-  // Implement invoice generation
+const updateOrderStatus = async (orderId, newStatus) => {
+  try {
+    await adminService.updateOrderStatus(orderId, newStatus)
+    toast.success('Cập nhật trạng thái thành công')
+    
+    // Update local state
+    const orderIndex = orders.value.findIndex(o => o.id === orderId)
+    if (orderIndex !== -1) {
+      orders.value[orderIndex].status = newStatus
+    }
+    
+    // Reinitialize select elements
+    setTimeout(() => {
+      const elems = document.querySelectorAll('select')
+      M.FormSelect.init(elems)
+    }, 100)
+  } catch (error) {
+    console.error('Error updating order status:', error)
+    toast.error('Không thể cập nhật trạng thái đơn hàng')
+  }
 }
 
+const resetFilters = () => {
+  filters.value = {
+    status: '',
+    startDate: '',
+    endDate: ''
+  }
+  currentPage.value = 1
+  fetchOrders()
+  
+  // Reinitialize select elements
+  setTimeout(() => {
+    const elems = document.querySelectorAll('select')
+    M.FormSelect.init(elems)
+  }, 100)
+}
+
+const changePage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    fetchOrders()
+  }
+}
+
+const formatDateTime = (dateString) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleString('vi-VN')
+}
+
+const formatPaymentStatus = (status) => {
+  const statusMap = {
+    'COMPLETED': 'Đã Thanh Toán',
+    'PENDING': 'Chờ Thanh Toán',
+    'FAILED': 'Thất Bại'
+  }
+  return statusMap[status] || 'Chưa Rõ'
+}
+
+const getPaymentStatusClass = (status) => {
+  const classMap = {
+    'COMPLETED': 'completed',
+    'PENDING': 'pending',
+    'FAILED': 'failed'
+  }
+  return classMap[status] || 'pending'
+}
+
+// Lifecycle
 onMounted(async () => {
-  await orderStore.fetchOrderById(orderId.value)
+  await fetchOrders()
+  
+  // Initialize Materialize components
+  setTimeout(() => {
+    const elems = document.querySelectorAll('select')
+    M.FormSelect.init(elems)
+  }, 100)
 })
 </script>
 
 <style scoped lang="scss">
-.order-number {
-  color: #666;
-  font-size: 1.1rem;
-  margin-top: -10px;
-}
-
-.status-timeline {
-  position: relative;
-  padding: 20px 0;
+.filters {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
   
-  .status-step {
-    display: flex;
-    align-items: start;
-    position: relative;
-    margin-bottom: 30px;
-    
-    &:last-child {
-      margin-bottom: 0;
-    }
-    
-    .step-icon {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: #e0e0e0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      
-      i {
-        color: white;
-        font-size: 24px;
-      }
-    }
-    
-    .step-info {
-      margin-left: 20px;
-      
-      h6 {
-        margin: 0 0 5px 0;
-        font-weight: 500;
-      }
-      
-      p {
-        margin: 0;
-        color: #666;
-        font-size: 0.9rem;
-      }
-    }
-    
-    .step-line {
-      position: absolute;
-      left: 25px;
-      top: 50px;
-      width: 2px;
-      height: 30px;
-      background: #e0e0e0;
-    }
-    
-    &.completed {
-      .step-icon {
-        background: #4caf50;
-      }
-      
-      .step-line {
-        background: #4caf50;
-      }
-    }
-    
-    &.active {
-      .step-icon {
-        background: #1976d2;
-        animation: pulse 2s infinite;
-      }
-    }
+  .input-field {
+    margin: 0;
+    min-width: 150px;
   }
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(25, 118, 210, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
-  }
-}
-
-.order-items {
-  .order-item {
-    display: flex;
-    align-items: center;
-    padding: 15px 0;
-    border-bottom: 1px solid #e0e0e0;
-    
-    &:last-child {
-      border-bottom: none;
-    }
-    
-    img {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 4px;
-      margin-right: 15px;
-    }
-    
-    .item-details {
-      flex: 1;
-      
-      h6 {
-        margin: 0 0 5px 0;
-        font-weight: 500;
-      }
-      
-      p {
-        margin: 0;
-        color: #666;
-        font-size: 0.9rem;
-      }
-    }
-    
-    .item-total {
-      font-weight: 600;
-      font-size: 1.1rem;
-    }
-  }
-}
-
-.order-summary {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 2px solid #e0e0e0;
   
-  .summary-row {
-    display: flex;
-    justify-content: space-between;
-    margin: 10px 0;
-    
-    &.total {
-      font-weight: 600;
-      font-size: 1.2rem;
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid #e0e0e0;
-    }
+  button {
+    height: 36px;
+    line-height: 36px;
+    padding: 0 16px;
   }
 }
 
-.info-section {
+.custom-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+table {
+  margin: 0;
+  
+  th, td {
+    padding: 12px 8px;
+  }
+  
+  thead th {
+    background: #f5f5f5;
+    font-weight: 500;
+  }
+}
+
+.customer-info {
   p {
-    margin: 10px 0;
+    margin: 2px 0 0 0;
+    font-size: 0.85rem;
+    color: #666;
   }
 }
 
-.payment-status {
-  padding: 2px 8px;
+.payment-badge {
+  padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
+  text-transform: uppercase;
   
   &.completed {
     background: #e8f5e9;
@@ -436,8 +420,64 @@ onMounted(async () => {
   }
 }
 
-.full-width {
-  width: 100%;
-  margin-bottom: 10px;
+.status-select {
+  margin: 0;
+  min-width: 120px;
+  
+  select {
+    font-size: 0.9rem;
+  }
+}
+
+.stat-card {
+  padding: 20px;
+  text-align: center;
+  
+  .stat-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    
+    i {
+      font-size: 2.5rem;
+    }
+    
+    div {
+      text-align: left;
+      
+      h6 {
+        margin: 0 0 5px 0;
+        font-size: 0.9rem;
+        color: #666;
+        font-weight: 400;
+      }
+      
+      h5 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+@media (max-width: 768px) {
+  .filters {
+    .input-field {
+      min-width: 130px;
+    }
+  }
+  
+  .stat-card .stat-content i {
+    font-size: 2rem;
+  }
 }
 </style>

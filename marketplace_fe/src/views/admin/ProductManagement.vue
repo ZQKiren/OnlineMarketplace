@@ -1,7 +1,6 @@
-<!-- src/views/admin/ProductManagement.vue -->
 <template>
   <div class="container">
-    <h4>Product Management</h4>
+    <h4>Quản Lý Sản Phẩm</h4>
     
     <div class="row">
       <div class="col s12">
@@ -11,7 +10,7 @@
             <input 
               type="text" 
               v-model="searchQuery"
-              placeholder="Search products..."
+              placeholder="Tìm kiếm sản phẩm..."
               @input="debouncedSearch"
             >
           </div>
@@ -21,14 +20,14 @@
             class="btn waves-effect waves-light"
           >
             <i class="material-icons left">add</i>
-            Add Product
+            Thêm Sản Phẩm
           </router-link>
         </div>
       </div>
     </div>
     
     <div v-if="loading" class="loading-spinner">
-      <LoadingSpinner text="Loading products..." />
+      <LoadingSpinner text="Đang tải sản phẩm..." />
     </div>
     
     <div v-else>
@@ -38,7 +37,7 @@
           <div class="filters">
             <div class="input-field inline">
               <select v-model="filters.categoryId" @change="fetchProducts">
-                <option value="">All Categories</option>
+                <option value="">Tất Cả Danh Mục</option>
                 <option 
                   v-for="category in categories" 
                   :key="category.id"
@@ -47,17 +46,17 @@
                   {{ category.name }}
                 </option>
               </select>
-              <label>Category</label>
+              <label>Danh Mục</label>
             </div>
             
             <div class="input-field inline">
               <select v-model="filters.stock" @change="fetchProducts">
-                <option value="">All Stock</option>
-                <option value="in-stock">In Stock</option>
-                <option value="low-stock">Low Stock (< 10)</option>
-                <option value="out-of-stock">Out of Stock</option>
+                <option value="">Tất Cả Kho</option>
+                <option value="in-stock">Còn Hàng</option>
+                <option value="low-stock">Sắp Hết (< 10)</option>
+                <option value="out-of-stock">Hết Hàng</option>
               </select>
-              <label>Stock Status</label>
+              <label>Trạng Thái Kho</label>
             </div>
           </div>
         </div>
@@ -78,13 +77,13 @@
                   <span></span>
                 </label>
               </th>
-              <th>Product</th>
-              <th>Category</th>
-              <th>Seller</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>Sản Phẩm</th>
+              <th>Danh Mục</th>
+              <th>Người Bán</th>
+              <th>Giá</th>
+              <th>Kho</th>
+              <th>Đánh Giá</th>
+              <th>Thao Tác</th>
             </tr>
           </thead>
           <tbody>
@@ -102,7 +101,7 @@
               <td>
                 <div class="product-info">
                   <img 
-                    :src="product.images[0] || '/placeholder.jpg'" 
+                    :src="product.images?.[0] || '/placeholder.jpg'" 
                     :alt="product.name"
                   >
                   <div>
@@ -111,9 +110,15 @@
                   </div>
                 </div>
               </td>
-              <td>{{ product.category.name }}</td>
-              <td>{{ product.seller.name }}</td>
-              <td>${{ product.price.toFixed(2) }}</td>
+              <td>{{ product.category?.name || 'N/A' }}</td>
+              <td>
+                <div>
+                  <strong>{{ product.seller?.name || 'N/A' }}</strong>
+                  <br>
+                  <small>{{ product.seller?.email || '' }}</small>
+                </div>
+              </td>
+              <td>${{ product.price?.toFixed(2) || '0.00' }}</td>
               <td>
                 <span 
                   class="stock-badge"
@@ -122,19 +127,13 @@
                     'low-stock': product.stock > 0 && product.stock < 10
                   }"
                 >
-                  {{ product.stock }}
+                  {{ product.stock || 0 }}
                 </span>
               </td>
               <td>
-                <div class="switch">
-                  <label>
-                    <input 
-                      type="checkbox" 
-                      :checked="product.isActive"
-                      @change="toggleProductStatus(product.id)"
-                    >
-                    <span class="lever"></span>
-                  </label>
+                <div class="rating">
+                  <span>⭐ {{ product.avgRating || 0 }}/5</span>
+                  <small>({{ product._count?.reviews || 0 }})</small>
                 </div>
               </td>
               <td>
@@ -142,7 +141,7 @@
                   <router-link 
                     :to="`/products/${product.id}`"
                     class="btn-flat btn-small"
-                    title="View"
+                    title="Xem"
                   >
                     <i class="material-icons">visibility</i>
                   </router-link>
@@ -150,14 +149,14 @@
                   <router-link 
                     :to="`/products/edit/${product.id}`"
                     class="btn-flat btn-small"
-                    title="Edit"
+                    title="Sửa"
                   >
                     <i class="material-icons">edit</i>
                   </router-link>
                   
                   <button 
-                    class="btn-flat btn-small"
-                    title="Delete"
+                    class="btn-flat btn-small red-text"
+                    title="Xóa"
                     @click="deleteProduct(product.id)"
                   >
                     <i class="material-icons">delete</i>
@@ -170,29 +169,18 @@
         
         <!-- Bulk Actions -->
         <div v-if="selectedProducts.length > 0" class="bulk-actions">
-          <span>{{ selectedProducts.length }} selected</span>
+          <span>{{ selectedProducts.length }} đã chọn</span>
           <button 
-            class="btn-flat waves-effect"
+            class="btn-flat waves-effect red-text"
             @click="bulkDelete"
           >
-            Delete Selected
-          </button>
-          <button 
-            class="btn-flat waves-effect"
-            @click="bulkUpdateStatus('active')"
-          >
-            Activate
-          </button>
-          <button 
-            class="btn-flat waves-effect"
-            @click="bulkUpdateStatus('inactive')"
-          >
-            Deactivate
+            <i class="material-icons left">delete</i>
+            Xóa Đã Chọn
           </button>
         </div>
         
         <!-- Pagination -->
-        <div class="center-align">
+        <div class="center-align" v-if="totalPages > 1">
           <ul class="pagination">
             <li :class="{ disabled: currentPage === 1 }">
               <a @click="changePage(currentPage - 1)">
@@ -201,7 +189,7 @@
             </li>
             
             <li 
-              v-for="page in totalPages" 
+              v-for="page in Math.min(totalPages, 10)" 
               :key="page"
               :class="{ active: page === currentPage }"
             >
@@ -224,7 +212,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useCategoryStore } from '@/stores/category'
-import productService from '@/services/product.service'
+import adminService from '@/services/admin.service'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { truncateText } from '@/utils/formatters'
 import { debounce } from 'lodash-es'
@@ -258,14 +246,15 @@ const fetchProducts = async () => {
       ...filters.value
     }
     
-    const response = await productService.getProducts(params)
-    products.value = response.data.data.map(p => ({
-      ...p,
-      isActive: true // In real app, this would come from backend
-    }))
-    totalPages.value = response.data.meta.totalPages
+    // Sử dụng admin service để lấy TẤT CẢ sản phẩm
+    const response = await adminService.getAllProducts(params)
+    products.value = response.data.data || []
+    totalPages.value = response.data.meta?.totalPages || 1
+    
+    console.log(`Đã tải ${products.value.length} sản phẩm`)
   } catch (error) {
     console.error('Error fetching products:', error)
+    toast.error('Không thể tải danh sách sản phẩm')
   } finally {
     loading.value = false
   }
@@ -284,33 +273,32 @@ const toggleSelectAll = () => {
   }
 }
 
-const toggleProductStatus = async (productId) => {
-  toast.info('Status update coming soon')
-  // Implement status toggle
-}
-
 const deleteProduct = async (productId) => {
-  if (!confirm('Are you sure you want to delete this product?')) return
+  if (!confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) return
   
   try {
-    await productService.deleteProduct(productId)
-    toast.success('Product deleted successfully')
+    await adminService.bulkDeleteProducts([productId])
+    toast.success('Xóa sản phẩm thành công')
     await fetchProducts()
   } catch (error) {
     console.error('Error deleting product:', error)
+    toast.error('Không thể xóa sản phẩm')
   }
 }
 
 const bulkDelete = async () => {
-  if (!confirm(`Delete ${selectedProducts.value.length} products?`)) return
+  if (!confirm(`Xóa ${selectedProducts.value.length} sản phẩm đã chọn?`)) return
   
-  toast.info('Bulk delete coming soon')
-  // Implement bulk delete
-}
-
-const bulkUpdateStatus = (status) => {
-  toast.info('Bulk status update coming soon')
-  // Implement bulk status update
+  try {
+    await adminService.bulkDeleteProducts(selectedProducts.value)
+    toast.success(`Đã xóa ${selectedProducts.value.length} sản phẩm`)
+    selectedProducts.value = []
+    selectAll.value = false
+    await fetchProducts()
+  } catch (error) {
+    console.error('Error bulk deleting:', error)
+    toast.error('Không thể xóa hàng loạt')
+  }
 }
 
 const changePage = (page) => {
@@ -322,9 +310,9 @@ const changePage = (page) => {
 
 onMounted(async () => {
   await categoryStore.fetchCategories()
-  fetchProducts()
+  await fetchProducts()
   
-  // Initialize select
+  // Initialize Materialize select
   setTimeout(() => {
     const elems = document.querySelectorAll('select')
     M.FormSelect.init(elems)
@@ -356,6 +344,8 @@ onMounted(async () => {
       padding-left: 40px;
       border: 1px solid #e0e0e0;
       border-radius: 4px;
+      height: 40px;
+      width: 100%;
     }
   }
 }
@@ -367,6 +357,7 @@ onMounted(async () => {
   
   .input-field {
     margin: 0;
+    min-width: 200px;
   }
 }
 
@@ -407,6 +398,15 @@ onMounted(async () => {
   }
 }
 
+.rating {
+  font-size: 0.9rem;
+  
+  small {
+    display: block;
+    color: #666;
+  }
+}
+
 .actions {
   display: flex;
   gap: 5px;
@@ -416,6 +416,9 @@ onMounted(async () => {
     padding: 0;
     width: 30px;
     height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     
     i {
       font-size: 18px;
@@ -430,6 +433,7 @@ onMounted(async () => {
   padding: 15px;
   background: #f5f5f5;
   margin-top: -1px;
+  border-top: 1px solid #e0e0e0;
   
   span {
     font-weight: 500;
@@ -441,5 +445,25 @@ onMounted(async () => {
   justify-content: center;
   align-items: center;
   min-height: 400px;
+}
+
+.custom-card {
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+table {
+  margin: 0;
+  
+  th, td {
+    padding: 12px 8px;
+  }
+  
+  thead th {
+    background: #f5f5f5;
+    font-weight: 500;
+  }
 }
 </style>
