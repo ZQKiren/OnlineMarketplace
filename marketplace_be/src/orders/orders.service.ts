@@ -2,15 +2,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderStatus } from '@prisma/client';
-import { IsNumber, Min } from 'class-validator';
+import { OrderStatus, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client'; // ✅ THÊM Prisma import
 
 @Injectable()
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, createOrderDto: CreateOrderDto) {
-    const { items } = createOrderDto;
+    const { items, paymentMethod = 'card', shippingAddress } = createOrderDto;
 
     // Validate products and calculate total
     let totalAmount = 0;
@@ -44,6 +43,8 @@ export class OrdersService {
         data: {
           userId,
           totalAmount,
+          paymentMethod: paymentMethod.toUpperCase() as PaymentMethod, // Convert to enum
+          shippingAddress: shippingAddress ? (shippingAddress as unknown as Prisma.InputJsonValue) : Prisma.JsonNull, // ✅ FIX: Cast to Prisma.InputJsonValue
           items: {
             create: orderItems,
           },
@@ -68,6 +69,20 @@ export class OrdersService {
           },
         });
       }
+
+      // Create payment record based on payment method
+      if (paymentMethod === 'cod') {
+        // For COD, create payment record with PENDING status
+        await tx.payment.create({
+          data: {
+            orderId: newOrder.id,
+            amount: totalAmount,
+            method: 'COD',
+            status: PaymentStatus.PENDING, // Will be updated when delivered
+          },
+        });
+      }
+      // For card payments, payment will be created by PaymentsService
 
       // Clear user's cart
       await tx.cartItem.deleteMany({
@@ -165,23 +180,44 @@ export class OrdersService {
 
     const order = await this.prisma.order.findUnique({
       where: { id },
+      include: {
+        payment: true,
+      },
     });
 
     if (!order) {
       throw new NotFoundException('Order not found');
     }
 
-    return this.prisma.order.update({
-      where: { id },
-      data: { status },
-      include: {
-        items: {
-          include: {
-            product: true,
+    return this.prisma.$transaction(async (tx) => {
+      // Update order status
+      const updatedOrder = await tx.order.update({
+        where: { id },
+        data: { status },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
           },
+          payment: true,
         },
-        payment: true,
-      },
+      });
+
+      // If COD order is marked as DELIVERED, mark payment as COMPLETED
+      if (
+        status === OrderStatus.DELIVERED && 
+        order.paymentMethod === PaymentMethod.COD &&
+        order.payment &&
+        order.payment.status === PaymentStatus.PENDING
+      ) {
+        await tx.payment.update({
+          where: { id: order.payment.id },
+          data: { status: PaymentStatus.COMPLETED },
+        });
+      }
+
+      return updatedOrder;
     });
   }
 
@@ -206,6 +242,35 @@ export class OrdersService {
       orderBy: {
         createdAt: 'desc',
       },
+    });
+  }
+
+  // Method to mark COD payment as completed manually
+  async completeCODPayment(orderId: string, isAdmin: boolean) {
+    if (!isAdmin) {
+      throw new BadRequestException('Only admin can complete COD payments');
+    }
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payment: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.paymentMethod !== PaymentMethod.COD) {
+      throw new BadRequestException('This is not a COD order');
+    }
+
+    if (!order.payment || order.payment.status === PaymentStatus.COMPLETED) {
+      throw new BadRequestException('Payment already completed or not found');
+    }
+
+    return this.prisma.payment.update({
+      where: { id: order.payment.id },
+      data: { status: PaymentStatus.COMPLETED },
     });
   }
 }

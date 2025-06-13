@@ -36,6 +36,11 @@ export class OrdersController {
     return this.ordersService.findAll(user.id, user.role === Role.ADMIN);
   }
 
+  @Get('my-orders')
+  getUserOrders(@CurrentUser() user: any) {
+    return this.ordersService.getUserOrderHistory(user.id);
+  }
+
   @Get(':id')
   findOne(
     @Param('id') id: string,
@@ -53,5 +58,16 @@ export class OrdersController {
     @CurrentUser() user: any,
   ) {
     return this.ordersService.updateStatus(id, status, user.role === Role.ADMIN);
+  }
+
+  // New endpoint to complete COD payment
+  @Post(':id/complete-cod-payment')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  completeCODPayment(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.ordersService.completeCODPayment(id, user.role === Role.ADMIN);
   }
 }

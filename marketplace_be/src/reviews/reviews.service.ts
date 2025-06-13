@@ -5,7 +5,7 @@ import { CreateReviewDto } from './dto/create-review.dto';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(userId: string, createReviewDto: CreateReviewDto) {
     const { productId, rating, comment } = createReviewDto;
@@ -110,6 +110,25 @@ export class ReviewsService {
         }, {} as Record<number, number>),
       },
     };
+  }
+
+  // src/reviews/reviews.service.ts - Thêm method này
+  async getMyReviews(userId: string) {
+    return this.prisma.review.findMany({
+      where: { userId },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            images: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
   }
 
   async update(id: string, userId: string, updateData: Partial<CreateReviewDto>) {

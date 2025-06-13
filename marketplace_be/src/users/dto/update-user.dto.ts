@@ -23,7 +23,10 @@ export class UpdateUserDto {
   name?: string;
 
   @IsOptional()
-  @IsPhoneNumber('VN', { message: 'Please provide a valid Vietnamese phone number' })
+  @IsString()
+  @Matches(/^(0[1-9][0-9]{8}|(\+84)[1-9][0-9]{8})$/, {
+    message: 'Please provide a valid Vietnamese phone number (0xxxxxxxxx or +84xxxxxxxxx)'
+  })
   phone?: string;
 
   @IsOptional()

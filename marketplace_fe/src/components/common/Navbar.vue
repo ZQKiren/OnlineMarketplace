@@ -80,6 +80,7 @@
     <li><a href="#!" @click.prevent="navigateTo('/profile')">My Profile</a></li>
     <li><a href="#!" @click.prevent="navigateTo('/my-products')">My Products</a></li>
     <li><a href="#!" @click.prevent="navigateTo('/orders')">My Orders</a></li>
+    <li><a href="#!" @click.prevent="navigateTo('/my-reviews')">My Reviews</a></li>
     <li v-if="authStore.isAdmin">
       <a href="#!" @click.prevent="navigateTo('/admin/dashboard')">Admin Dashboard</a>
     </li>
@@ -303,6 +304,8 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleEscape)
   destroyInstances()
 })
+
+
 </script>
 
 <style scoped lang="scss">

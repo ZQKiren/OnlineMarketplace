@@ -16,5 +16,9 @@ export default {
 
   deleteReview(id) {
     return api.delete(`/reviews/${id}`)
+  },
+
+  getMyReviews() {
+    return api.get('/reviews/my-reviews')
   }
 }

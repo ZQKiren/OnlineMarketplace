@@ -84,6 +84,12 @@ const routes = [
     component: () => import('@/views/profile/MyProducts.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/my-reviews',
+    name: 'my-reviews',
+    component: () => import('@/views/profile/MyReviews.vue'),
+    meta: { requiresAuth: true },
+  },
   // Admin routes
   // src/router/index.js - Thêm route trong admin section
   {

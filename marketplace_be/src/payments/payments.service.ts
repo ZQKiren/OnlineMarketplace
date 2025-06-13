@@ -3,7 +3,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus, PaymentMethod } from '@prisma/client';
 import Stripe from 'stripe';
 
 @Injectable()
@@ -39,6 +39,11 @@ export class PaymentsService {
 
     if (!order) {
       throw new NotFoundException('Order not found');
+    }
+
+    // Check if this is a COD order
+    if (order.paymentMethod === PaymentMethod.COD) {
+      throw new BadRequestException('This is a Cash on Delivery order, no card payment required');
     }
 
     if (order.payment) {
@@ -142,5 +147,61 @@ export class PaymentsService {
         data: { status: PaymentStatus.FAILED },
       });
     }
+  }
+
+  // Get payment methods summary for admin
+  async getPaymentMethodsStats() {
+    const stats = await this.prisma.order.groupBy({
+      by: ['paymentMethod'],
+      _count: {
+        paymentMethod: true,
+      },
+      _sum: {
+        totalAmount: true,
+      },
+    });
+
+    return stats.map(stat => ({
+      method: stat.paymentMethod,
+      totalOrders: stat._count.paymentMethod,
+      totalRevenue: stat._sum.totalAmount || 0,
+    }));
+  }
+
+  // Get COD orders that need payment completion
+  async getPendingCODOrders() {
+    return this.prisma.order.findMany({
+      where: {
+        paymentMethod: PaymentMethod.COD,
+        payment: {
+          status: PaymentStatus.PENDING,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        payment: true,
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
   }
 }

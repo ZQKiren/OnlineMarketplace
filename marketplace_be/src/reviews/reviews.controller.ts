@@ -1,11 +1,11 @@
 // src/reviews/reviews.controller.ts
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Patch, 
-  Param, 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
   Delete,
   UseGuards,
 } from '@nestjs/common';
@@ -19,7 +19,7 @@ import { Role } from '@prisma/client';
 
 @Controller('reviews')
 export class ReviewsController {
-  constructor(private readonly reviewsService: ReviewsService) {}
+  constructor(private readonly reviewsService: ReviewsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -33,6 +33,12 @@ export class ReviewsController {
   @Get('product/:productId')
   findByProduct(@Param('productId') productId: string) {
     return this.reviewsService.findByProduct(productId);
+  }
+
+  @Get('my-reviews')
+  @UseGuards(JwtAuthGuard)
+  getMyReviews(@CurrentUser() user: any) {
+    return this.reviewsService.getMyReviews(user.id);
   }
 
   @Patch(':id')
