@@ -71,6 +71,18 @@ const routes = [
     component: () => import('@/views/orders/OrderDetail.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/chat',
+    name: 'chat',
+    component: () => import('@/views/chat/ChatRoom.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/chat/:id',
+    name: 'chat-room',
+    component: () => import('@/views/chat/ChatRoom.vue'),
+    meta: { requiresAuth: true },
+  },
   // Profile
   {
     path: '/profile',

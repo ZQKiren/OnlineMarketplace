@@ -4,6 +4,7 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -38,6 +39,19 @@ enum PaymentMethod {
   COD
 }
 
+// ✨ NEW: Chat related enums
+enum MessageType {
+  TEXT
+  IMAGE
+  SYSTEM
+}
+
+enum ChatStatus {
+  ACTIVE
+  ARCHIVED
+  BLOCKED
+}
+
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
@@ -46,6 +60,8 @@ model User {
   phone        String?
   avatar       String?
   role         Role      @default(USER)
+  isOnline     Boolean   @default(false)  // ✨ NEW: Online status
+  lastSeen     DateTime? // ✨ NEW: Last seen timestamp
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   
@@ -53,6 +69,11 @@ model User {
   orders       Order[]
   reviews      Review[]
   cart         CartItem[]
+  
+  // ✨ NEW: Chat relationships
+  buyerChats   Chat[]    @relation("BuyerChats")
+  sellerChats  Chat[]    @relation("SellerChats")
+  messages     Message[]
 }
 
 model Category {
@@ -82,6 +103,9 @@ model Product {
   reviews      Review[]
   cartItems    CartItem[]
   orderItems   OrderItem[]
+  
+  // ✨ NEW: Chat relationship
+  chats        Chat[]
 }
 
 model CartItem {
@@ -103,8 +127,8 @@ model Order {
   userId          String
   totalAmount     Float
   status          OrderStatus   @default(PENDING)
-  paymentMethod   PaymentMethod @default(CARD)  // ← THÊM MỚI
-  shippingAddress Json?                         // ← THÊM MỚI
+  paymentMethod   PaymentMethod @default(CARD)
+  shippingAddress Json?
   paymentId       String?       @unique
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -152,4 +176,37 @@ model Review {
   product      Product   @relation(fields: [productId], references: [id])
   
   @@unique([userId, productId])
+}
+
+// ✨ NEW: Chat Models
+model Chat {
+  id           String      @id @default(uuid())
+  productId    String
+  buyerId      String
+  sellerId     String
+  status       ChatStatus  @default(ACTIVE)
+  lastMessageAt DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  product      Product     @relation(fields: [productId], references: [id])
+  buyer        User        @relation("BuyerChats", fields: [buyerId], references: [id])
+  seller       User        @relation("SellerChats", fields: [sellerId], references: [id])
+  messages     Message[]
+  
+  @@unique([productId, buyerId]) // One chat per product per buyer
+}
+
+model Message {
+  id           String      @id @default(uuid())
+  chatId       String
+  senderId     String
+  content      String
+  type         MessageType @default(TEXT)
+  isRead       Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  chat         Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender       User        @relation(fields: [senderId], references: [id])
 }

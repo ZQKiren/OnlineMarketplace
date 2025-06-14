@@ -11,8 +11,19 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const authStore = useAuthStore()
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
+    
+    // ✅ FIX: Try auth store first, fallback to localStorage
+    let token = authStore.token
+    if (!token) {
+      token = localStorage.getItem('token')
+      if (token) {
+        // Update auth store if token found in localStorage
+        authStore.token = token
+      }
+    }
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
@@ -28,8 +39,14 @@ api.interceptors.response.use(
     const authStore = useAuthStore()
     
     if (error.response?.status === 401) {
+      // ✅ FIX: Clear both auth store and localStorage
       authStore.logout()
-      window.location.href = '/login'
+      localStorage.removeItem('token')
+      
+      // ✅ FIX: Only redirect if not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login'
+      }
     }
     
     return Promise.reject(error)
