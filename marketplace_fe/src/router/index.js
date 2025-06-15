@@ -1,4 +1,4 @@
-// src/router/index.js
+// src/router/index.js - FIXED VERSION
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Home from '@/views/Home.vue'
@@ -150,23 +150,100 @@ const router = createRouter({
   routes,
 })
 
-// Navigation guards
+// ✅ FIXED: Navigation guards with proper auth initialization
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Fetch user profile if authenticated but no user data
-  if (authStore.isAuthenticated && !authStore.user) {
-    await authStore.fetchProfile()
-  }
+  console.log('🛡️ Router guard:', {
+    to: to.path,
+    requiresAuth: to.meta.requiresAuth,
+    requiresAdmin: to.meta.requiresAdmin,
+    guest: to.meta.guest,
+    isAuthenticated: authStore.isAuthenticated,
+    hasToken: !!authStore.token,
+    hasUser: !!authStore.user,
+    isInitialized: authStore.isInitialized,
+    isLoading: authStore.isLoading
+  })
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next({ name: 'login', query: { redirect: to.fullPath } })
-  } else if (to.meta.guest && authStore.isAuthenticated) {
-    next({ name: 'home' })
-  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    next({ name: 'home' })
-  } else {
+  try {
+    // ✅ CRITICAL: Initialize auth store if not already initialized
+    if (!authStore.isInitialized && !authStore.isLoading) {
+      console.log('🔄 Auth not initialized, initializing...')
+      await authStore.initialize()
+    }
+
+    // ✅ Wait for any ongoing initialization to complete
+    if (authStore.isLoading) {
+      console.log('⏳ Waiting for auth initialization to complete...')
+      // Wait for loading to finish
+      let attempts = 0
+      while (authStore.isLoading && attempts < 50) { // Max 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
+      }
+    }
+
+    // ✅ FIXED: Better auth check - load user if we have token but no user
+    if (authStore.token && !authStore.user && !authStore.isLoading) {
+      console.log('👤 Token exists but no user data, fetching profile...')
+      try {
+        await authStore.fetchProfile()
+      } catch (error) {
+        console.error('❌ Failed to fetch profile in router guard:', error)
+        
+        // Only logout if it's a clear auth error
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.log('🔐 Invalid token, logging out...')
+          authStore.logout()
+          return next({ name: 'login', query: { redirect: to.fullPath } })
+        }
+        
+        // For other errors (network, etc), don't logout but continue
+        console.log('⚠️ Non-auth error, continuing with navigation')
+      }
+    }
+
+    // ✅ Check route authentication requirements
+    if (to.meta.requiresAuth) {
+      if (!authStore.isAuthenticated) {
+        console.log('🔐 Route requires auth but user not authenticated')
+        return next({ name: 'login', query: { redirect: to.fullPath } })
+      }
+    }
+
+    // ✅ Check guest routes (login/register pages)
+    if (to.meta.guest && authStore.isAuthenticated) {
+      console.log('👤 User authenticated, redirecting from guest page')
+      return next({ name: 'home' })
+    }
+
+    // ✅ Check admin requirements
+    if (to.meta.requiresAdmin) {
+      if (!authStore.isAuthenticated) {
+        console.log('🔐 Admin route requires auth')
+        return next({ name: 'login', query: { redirect: to.fullPath } })
+      }
+      
+      if (!authStore.isAdmin) {
+        console.log('👮‍♂️ User not admin, redirecting')
+        return next({ name: 'home' })
+      }
+    }
+
+    console.log('✅ Router guard passed, proceeding to:', to.path)
     next()
+
+  } catch (error) {
+    console.error('❌ Router guard error:', error)
+    
+    // If we're going to login page, let it through
+    if (to.name === 'login') {
+      return next()
+    }
+    
+    // Otherwise redirect to login
+    next({ name: 'login', query: { redirect: to.fullPath } })
   }
 })
 

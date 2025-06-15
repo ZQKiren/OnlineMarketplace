@@ -1,4 +1,4 @@
-// src/main.js - UPDATED WITH REAL-TIME CHAT
+// src/main.js - FIXED WITH PROPER INITIALIZATION ORDER
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
@@ -35,132 +35,31 @@ app.use(Toast, {
   pauseOnHover: true,
 })
 
-// Mount app first
-app.mount('#app')
-
-// ✅ UPDATED: Enhanced initialization with real-time chat
+// ✅ CRITICAL: Initialize auth BEFORE mounting app
 const initializeApp = async () => {
+  console.log('🚀 Starting app initialization...')
+  
   try {
-    console.log('🚀 Initializing app with real-time chat...')
-    
     // Initialize stores
     const authStore = useAuthStore()
     const chatStore = useChatStore()
     
-    // ✅ Setup socket event handlers for chat store
-    const setupSocketHandlers = () => {
-      console.log('🔌 Setting up socket event handlers...')
-      
-      // Handle new messages
-      socketService.onNewMessage((message) => {
-        console.log('🔔 New message received:', message.id)
-        chatStore.handleNewMessage(message)
-      })
-      
-      // Handle user online/offline status
-      socketService.onUserOnline((data) => {
-        console.log('🟢 User online:', data.userId)
-        chatStore.updateOnlineStatus(data.userId, true)
-      })
-      
-      socketService.onUserOffline((data) => {
-        console.log('🔴 User offline:', data.userId)
-        chatStore.updateOnlineStatus(data.userId, false)
-      })
-      
-      // Handle messages read
-      socketService.onMessagesRead((data) => {
-        console.log('✅ Messages read:', data.chatId)
-        chatStore.markChatAsRead(data.chatId, data.userId)
-      })
-      
-      // Handle typing indicators
-      socketService.onUserTyping((data) => {
-        chatStore.setUserTyping(data.chatId, data.userId, data.userName, data.isTyping)
-      })
-      
-      console.log('✅ Socket handlers ready')
-    }
+    // ✅ CRITICAL: Initialize auth store FIRST
+    console.log('🔐 Initializing authentication...')
+    await authStore.initialize()
     
-    // ✅ Setup real-time connection
-    const connectRealTime = async () => {
-      if (!authStore.token) return
-      
-      try {
-        console.log('🔌 Connecting real-time socket...')
-        await socketService.connect(authStore.token)
-        
-        // Setup event handlers after connection
-        setupSocketHandlers()
-        
-        // Load chats after socket is connected
-        if (authStore.isAuthenticated) {
-          console.log('📋 Loading chats...')
-          await chatStore.fetchChats()
-        }
-        
-        console.log('✅ Real-time chat connected!')
-        
-      } catch (error) {
-        console.error('❌ Socket connection failed:', error)
-      }
-    }
-    
-    // Check if user is already logged in
-    if (authStore.token) {
-      try {
-        console.log('🔐 Loading user profile...')
-        await authStore.fetchProfile()
-        console.log('✅ User profile loaded:', authStore.user?.name)
-        
-        // Connect real-time after profile is loaded
-        await connectRealTime()
-        
-      } catch (error) {
-        console.error('❌ Failed to load user profile:', error)
-        authStore.logout()
-      }
+    // ✅ Setup real-time features if user is authenticated
+    if (authStore.isAuthenticated) {
+      console.log('✅ User authenticated, setting up real-time features...')
+      await setupRealTimeFeatures(authStore, chatStore)
     } else {
-      // Still setup socket handlers even if not logged in
-      setupSocketHandlers()
+      console.log('🔐 User not authenticated, skipping real-time setup')
+      // Still setup handlers for when user logs in later
+      setupSocketHandlers(chatStore)
     }
     
-    // ✅ UPDATED: Better auth state watching with reactive approach
-    let previousAuthState = authStore.isAuthenticated
-    let previousToken = authStore.token
-    
-    // Watch for auth changes every second
-    const watchAuthChanges = () => {
-      const currentAuthState = authStore.isAuthenticated
-      const currentToken = authStore.token
-      
-      // Check if auth state changed
-      if (currentAuthState !== previousAuthState || currentToken !== previousToken) {
-        console.log('🔄 Auth state changed:', {
-          wasAuth: previousAuthState,
-          nowAuth: currentAuthState,
-          hasToken: !!currentToken
-        })
-        
-        if (currentAuthState && currentToken && !previousAuthState) {
-          // User just logged in
-          console.log('👋 User logged in, connecting real-time...')
-          connectRealTime()
-          
-        } else if (!currentAuthState && previousAuthState) {
-          // User just logged out
-          console.log('👋 User logged out, disconnecting...')
-          socketService.disconnect()
-          chatStore.clearData()
-        }
-        
-        previousAuthState = currentAuthState
-        previousToken = currentToken
-      }
-    }
-    
-    // Start watching auth changes
-    setInterval(watchAuthChanges, 1000)
+    // ✅ Setup auth state watcher
+    setupAuthWatcher(authStore, chatStore)
     
     console.log('🎉 App initialization complete!')
     
@@ -169,10 +68,121 @@ const initializeApp = async () => {
   }
 }
 
-// ✅ Initialize after DOM is ready
-setTimeout(initializeApp, 100)
+// ✅ Setup real-time features
+const setupRealTimeFeatures = async (authStore, chatStore) => {
+  try {
+    console.log('🔌 Setting up real-time features...')
+    
+    // Setup socket event handlers first
+    setupSocketHandlers(chatStore)
+    
+    // Connect to socket
+    await socketService.connect(authStore.token)
+    console.log('✅ Socket connected!')
+    
+    // Load chats after socket is connected
+    console.log('📋 Loading chats...')
+    await chatStore.fetchChats()
+    console.log('✅ Chats loaded!')
+    
+  } catch (error) {
+    console.error('❌ Real-time setup failed:', error)
+    // Don't logout user just because socket failed
+  }
+}
 
-// ✅ ENHANCED: Better cleanup and reconnection handling
+// ✅ Setup socket event handlers
+const setupSocketHandlers = (chatStore) => {
+  console.log('🔌 Setting up socket event handlers...')
+  
+  // Clear existing handlers first
+  socketService.eventCallbacks.clear()
+  
+  // Handle new messages
+  socketService.onNewMessage((message) => {
+    console.log('🔔 Main: New message received:', message.id)
+    chatStore.handleNewMessage(message)
+  })
+  
+  // Handle user online/offline status
+  socketService.onUserOnline((data) => {
+    console.log('🟢 Main: User online:', data.userId)
+    chatStore.updateOnlineStatus(data.userId, true)
+  })
+  
+  socketService.onUserOffline((data) => {
+    console.log('🔴 Main: User offline:', data.userId)
+    chatStore.updateOnlineStatus(data.userId, false)
+  })
+  
+  // Handle messages read
+  socketService.onMessagesRead((data) => {
+    console.log('✅ Main: Messages read:', data.chatId)
+    chatStore.markChatAsRead(data.chatId, data.userId)
+  })
+  
+  // Handle typing indicators
+  socketService.onUserTyping((data) => {
+    chatStore.setUserTyping(data.chatId, data.userId, data.userName, data.isTyping)
+  })
+  
+  console.log('✅ Socket handlers setup complete')
+}
+
+// ✅ Setup auth state watcher
+const setupAuthWatcher = (authStore, chatStore) => {
+  let previousAuthState = authStore.isAuthenticated
+  let previousToken = authStore.token
+  
+  console.log('👁️ Setting up auth state watcher...')
+  
+  const watchAuthChanges = () => {
+    const currentAuthState = authStore.isAuthenticated
+    const currentToken = authStore.token
+    
+    // Check if auth state changed
+    if (currentAuthState !== previousAuthState || currentToken !== previousToken) {
+      console.log('🔄 Auth state changed:', {
+        wasAuth: previousAuthState,
+        nowAuth: currentAuthState,
+        hasToken: !!currentToken,
+        hasUser: !!authStore.user
+      })
+      
+      if (currentAuthState && currentToken && !previousAuthState) {
+        // User just logged in
+        console.log('👋 User logged in, setting up real-time...')
+        setupRealTimeFeatures(authStore, chatStore)
+        
+      } else if (!currentAuthState && previousAuthState) {
+        // User just logged out
+        console.log('👋 User logged out, disconnecting...')
+        socketService.disconnect()
+        chatStore.clearData()
+      }
+      
+      previousAuthState = currentAuthState
+      previousToken = currentToken
+    }
+  }
+  
+  // Check every 2 seconds
+  setInterval(watchAuthChanges, 2000)
+}
+
+// ✅ CRITICAL: Wait for router to be ready, then initialize, then mount
+router.isReady().then(async () => {
+  console.log('🛣️ Router is ready')
+  
+  // Initialize app BEFORE mounting
+  await initializeApp()
+  
+  // NOW mount the app
+  app.mount('#app')
+  console.log('🚀 App mounted successfully')
+})
+
+// ✅ Better cleanup and reconnection handling
 window.addEventListener('beforeunload', () => {
   console.log('👋 App closing, cleaning up...')
   socketService.disconnect()
@@ -183,18 +193,16 @@ document.addEventListener('visibilitychange', () => {
   const authStore = useAuthStore()
   
   if (!document.hidden && authStore.isAuthenticated) {
-    // Page became visible and user is authenticated
-    if (!socketService.isConnected) {
-      console.log('👁️ Page visible, reconnecting socket...')
-      setTimeout(async () => {
-        try {
-          await socketService.connect(authStore.token)
-          console.log('✅ Socket reconnected')
-        } catch (error) {
-          console.error('❌ Reconnection failed:', error)
-        }
-      }, 1000)
-    }
+    setTimeout(() => {
+      if (!socketService.isConnected && authStore.token) {
+        console.log('👁️ Page visible, reconnecting socket...')
+        socketService.connect(authStore.token).then(() => {
+          console.log('✅ Socket reconnected on visibility')
+        }).catch(error => {
+          console.error('❌ Visibility reconnection failed:', error)
+        })
+      }
+    }, 1000)
   }
 })
 
@@ -202,15 +210,14 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('focus', () => {
   const authStore = useAuthStore()
   
-  if (authStore.isAuthenticated && !socketService.isConnected) {
+  if (authStore.isAuthenticated && !socketService.isConnected && authStore.token) {
     console.log('🎯 Window focused, checking connection...')
-    setTimeout(async () => {
-      try {
-        await socketService.connect(authStore.token)
+    setTimeout(() => {
+      socketService.connect(authStore.token).then(() => {
         console.log('✅ Socket reconnected on focus')
-      } catch (error) {
+      }).catch(error => {
         console.error('❌ Focus reconnection failed:', error)
-      }
+      })
     }, 500)
   }
 })
@@ -220,14 +227,13 @@ window.addEventListener('online', () => {
   console.log('🌐 Back online!')
   const authStore = useAuthStore()
   
-  if (authStore.isAuthenticated) {
-    setTimeout(async () => {
-      try {
-        await socketService.connect(authStore.token)
+  if (authStore.isAuthenticated && authStore.token) {
+    setTimeout(() => {
+      socketService.connect(authStore.token).then(() => {
         console.log('✅ Socket reconnected after coming online')
-      } catch (error) {
+      }).catch(error => {
         console.error('❌ Online reconnection failed:', error)
-      }
+      })
     }, 2000)
   }
 })
@@ -243,4 +249,14 @@ app.config.errorHandler = (error, instance, info) => {
   console.error('Info:', info)
 }
 
-console.log('🚀 Vue app with real-time chat started')
+console.log('🚀 Vue app setup complete')
+
+// ✅ DEBUGGING: Expose for manual testing in dev mode
+if (import.meta.env.DEV) {
+  window.socketService = socketService
+  window.getAuthStore = () => useAuthStore()
+  window.getChatStore = () => useChatStore()
+  
+  console.log('🐛 Debug: Socket service available at window.socketService')
+  console.log('🐛 Debug: Stores available at window.getAuthStore() and window.getChatStore()')
+}

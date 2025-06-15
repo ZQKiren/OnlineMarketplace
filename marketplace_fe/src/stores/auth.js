@@ -1,284 +1,132 @@
-// src/stores/auth.js - UPDATED WITH SOCKET INTEGRATION
+// src/stores/auth.js - FINAL FIX
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import authService from '@/services/auth.service'
-import socketService from '@/services/socket.service' // ✅ NEW: Import socket service
 import router from '@/router'
-import { useToast } from 'vue-toastification' // ✅ NEW: For notifications
 
 export const useAuthStore = defineStore('auth', () => {
-  const toast = useToast()
-  
-  // ✅ EXISTING STATE
   const user = ref(null)
   const token = ref(localStorage.getItem('token') || null)
-  
-  // ✅ NEW: Socket state
-  const socketConnected = ref(false)
-  const loading = ref(false)
+  const isInitialized = ref(false) // ✅ NEW: Track if store is initialized
+  const isLoading = ref(false)
 
-  // ✅ EXISTING COMPUTED
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
+  // ✅ FIXED: Authentication check that doesn't cause redirects during initialization
+  const isAuthenticated = computed(() => {
+    // If we have a token, consider user authenticated even if profile isn't loaded yet
+    return !!token.value
+  })
+
+  // ✅ NEW: Check if user data is fully loaded
+  const isUserLoaded = computed(() => {
+    return !!user.value && isInitialized.value
+  })
+
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
-  // ✅ NEW: Initialize auth on app start
-  const initializeAuth = async () => {
+  // ✅ NEW: Initialize store on app startup
+  const initialize = async () => {
+    if (isInitialized.value) return
+    
+    console.log('🔐 Initializing auth store...')
+    
+    // If we have a token, try to load user profile
     if (token.value) {
       try {
-        console.log('🔐 Initializing auth with existing token...')
-        
-        // Get user profile first
-        const response = await authService.getProfile()
-        user.value = response.data
-        
-        console.log('✅ User profile loaded:', user.value.name)
-        
-        // Then connect socket
-        await connectSocket()
-        
+        isLoading.value = true
+        await fetchProfile()
+        console.log('✅ Auth initialization successful:', user.value?.name)
       } catch (error) {
         console.error('❌ Auth initialization failed:', error)
-        logout()
+        // Only logout if it's a clear auth error
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          logout()
+        }
+      } finally {
+        isLoading.value = false
       }
     }
+    
+    isInitialized.value = true
+    console.log('✅ Auth store initialized')
   }
 
-  // ✅ NEW: Connect socket when authenticated
-  const connectSocket = async () => {
-    if (!token.value || socketConnected.value) return
-
-    try {
-      console.log('🔌 Connecting socket for user:', user.value?.id)
-      await socketService.connect(token.value)
-      socketConnected.value = true
-      console.log('✅ Socket connected successfully')
-    } catch (error) {
-      console.error('❌ Socket connection failed:', error)
-      socketConnected.value = false
-    }
-  }
-
-  // ✅ NEW: Disconnect socket
-  const disconnectSocket = () => {
-    if (socketConnected.value) {
-      console.log('🔌 Disconnecting socket')
-      socketService.disconnect()
-      socketConnected.value = false
-    }
-  }
-
-  // ✅ UPDATED: Login with socket connection
   async function login(credentials) {
-    loading.value = true
     try {
       console.log('🔐 Logging in...')
-      
       const response = await authService.login(credentials)
       token.value = response.data.token
       user.value = response.data.user
       localStorage.setItem('token', response.data.token)
+      isInitialized.value = true
       
       console.log('✅ Login successful:', user.value.name)
-      
-      // ✅ NEW: Connect socket after login
-      await connectSocket()
-      
-      // ✅ NEW: Show success message
-      if (toast) {
-        toast.success(`Welcome back, ${user.value.name}!`)
-      }
-      
       router.push('/')
       return response
     } catch (error) {
       console.error('❌ Login failed:', error)
-      
-      // ✅ NEW: Show error message
-      if (toast) {
-        const message = error.response?.data?.message || 'Login failed'
-        toast.error(message)
-      }
-      
       throw error
-    } finally {
-      loading.value = false
     }
   }
 
-  // ✅ UPDATED: Register with socket connection
   async function register(userData) {
-    loading.value = true
     try {
       console.log('📝 Registering...')
-      
       const response = await authService.register(userData)
       token.value = response.data.token
       user.value = response.data.user
       localStorage.setItem('token', response.data.token)
+      isInitialized.value = true
       
       console.log('✅ Registration successful:', user.value.name)
-      
-      // ✅ NEW: Connect socket after registration
-      await connectSocket()
-      
-      // ✅ NEW: Show success message
-      if (toast) {
-        toast.success(`Welcome to our platform, ${user.value.name}!`)
-      }
-      
       router.push('/')
       return response
     } catch (error) {
       console.error('❌ Registration failed:', error)
-      
-      // ✅ NEW: Show error message
-      if (toast) {
-        const message = error.response?.data?.message || 'Registration failed'
-        toast.error(message)
-      }
-      
       throw error
-    } finally {
-      loading.value = false
     }
   }
 
-  // ✅ UPDATED: Logout with socket disconnection
   function logout() {
     console.log('🔐 Logging out...')
-    
-    // ✅ NEW: Disconnect socket first
-    disconnectSocket()
-    
-    // ✅ EXISTING: Clear auth data
     user.value = null
     token.value = null
     localStorage.removeItem('token')
+    isInitialized.value = false
     
     console.log('✅ Logout successful')
-    
-    // ✅ NEW: Show logout message
-    if (toast) {
-      toast.info('You have been logged out')
-    }
-    
     router.push('/login')
   }
 
-  // ✅ UPDATED: Fetch profile (renamed from existing)
   async function fetchProfile() {
-    if (!token.value) return
+    if (!token.value) {
+      console.log('⚠️ No token available for profile fetch')
+      return
+    }
     
     try {
+      console.log('👤 Fetching user profile...')
       const response = await authService.getProfile()
       user.value = response.data
-      
-      // ✅ NEW: Connect socket if not connected
-      if (!socketConnected.value) {
-        await connectSocket()
-      }
-      
+      console.log('✅ Profile loaded:', user.value.name)
       return response
     } catch (error) {
-      console.error('❌ Fetch profile failed:', error)
-      logout()
+      console.error('❌ Profile fetch failed:', error)
       throw error
     }
-  }
-
-  // ✅ NEW: Update profile method
-  const updateProfile = async (profileData) => {
-    loading.value = true
-    try {
-      const response = await authService.updateProfile(profileData)
-      user.value = response.data
-      
-      if (toast) {
-        toast.success('Profile updated successfully')
-      }
-      
-      return response
-    } catch (error) {
-      console.error('❌ Profile update failed:', error)
-      
-      if (toast) {
-        const message = error.response?.data?.message || 'Profile update failed'
-        toast.error(message)
-      }
-      
-      throw error
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // ✅ NEW: Change password method
-  const changePassword = async (passwordData) => {
-    loading.value = true
-    try {
-      const response = await authService.changePassword(passwordData)
-      
-      if (toast) {
-        toast.success('Password changed successfully')
-      }
-      
-      return response
-    } catch (error) {
-      console.error('❌ Password change failed:', error)
-      
-      if (toast) {
-        const message = error.response?.data?.message || 'Password change failed'
-        toast.error(message)
-      }
-      
-      throw error
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // ✅ NEW: Socket status methods
-  const getSocketStatus = () => {
-    return {
-      connected: socketConnected.value,
-      ...socketService.getStatus()
-    }
-  }
-
-  // ✅ NEW: Force reconnect socket
-  const reconnectSocket = async () => {
-    if (!token.value) return
-    
-    console.log('🔄 Manually reconnecting socket...')
-    disconnectSocket()
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
-    await connectSocket()
   }
 
   return {
-    // ✅ EXISTING STATE
     user,
     token,
+    isInitialized,
+    isLoading,
     isAuthenticated,
+    isUserLoaded,
     isAdmin,
-    
-    // ✅ NEW STATE
-    socketConnected,
-    loading,
-    
-    // ✅ EXISTING METHODS (updated)
+    initialize,
     login,
     register,
     logout,
     fetchProfile,
-    
-    // ✅ NEW METHODS
-    initializeAuth,
-    connectSocket,
-    disconnectSocket,
-    updateProfile,
-    changePassword,
-    getSocketStatus,
-    reconnectSocket,
   }
 })
