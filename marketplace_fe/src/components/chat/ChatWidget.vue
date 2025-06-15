@@ -1,4 +1,4 @@
-<!-- src/components/chat/ChatWidget.vue - FIXED VERSION -->
+<!-- src/components/chat/ChatWidget.vue - FIXED SYNC VERSION -->
 <template>
   <div class="chat-widget">
     <!-- Chat Button -->
@@ -72,7 +72,7 @@
             </div>
           </div>
 
-          <!-- ✅ FIXED: Display all messages -->
+          <!-- ✅ FIXED: Use centralized messages -->
           <div v-for="message in messages" :key="message.id" 
                class="message" 
                :class="{ 'own-message': message.senderId === authStore.user?.id }">
@@ -140,7 +140,6 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useToast } from 'vue-toastification'
-import chatService from '@/services/chat.service'
 import socketService from '@/services/socket.service'
 import { getStaticUrl } from '@/services/api'
 
@@ -168,10 +167,14 @@ export default {
     const messagesContainer = ref(null)
     const messageInput = ref(null)
     const currentChat = ref(null)
-    const messages = ref([]) // ✅ FIXED: Local messages array
     const typingUsers = ref(new Map())
     const typingTimeout = ref(null)
     const unreadCount = ref(0)
+    
+    // ✅ FIXED: Use centralized messages from store
+    const messages = computed(() => {
+      return currentChat.value ? chatStore.getChatMessages(currentChat.value.id) : []
+    })
     
     // Computed
     const canStartChat = computed(() => {
@@ -236,18 +239,19 @@ export default {
     const openChat = async () => {
       loading.value = true
       try {
-        console.log('💬 Opening chat for product:', props.product.id)
+        console.log('💬 ChatWidget opening chat for product:', props.product.id)
         
+        // ✅ FIXED: Use centralized store method
         const chat = await chatStore.createChat(props.product.id, props.product.seller.id)
         currentChat.value = chat
         
-        console.log('✅ Chat created:', chat)
+        console.log('✅ ChatWidget chat created:', chat)
         
         // Join chat room
         socketService.joinChat(chat.id)
         
-        // Fetch messages
-        await fetchMessages()
+        // Fetch messages from store
+        await chatStore.fetchMessages(chat.id)
         
         isOpen.value = true
         isMinimized.value = false
@@ -257,89 +261,37 @@ export default {
         messageInput.value?.focus()
         
       } catch (error) {
-        console.error('❌ Error opening chat:', error)
+        console.error('❌ ChatWidget error opening chat:', error)
         toast.error(error.response?.data?.message || 'Failed to start chat')
       } finally {
         loading.value = false
       }
     }
     
-    // ✅ FIXED: Proper message fetching and display
-    const fetchMessages = async () => {
-      if (!currentChat.value) return
-      
+    // ✅ FIXED: Use centralized store for sending messages
+    const sendMessage = async () => {
+      if (!newMessage.value.trim() || sending.value || !currentChat.value) return
+
+      const content = newMessage.value.trim()
+      newMessage.value = ''
+      sending.value = true
+
       try {
-        console.log('📨 Fetching messages for chat:', currentChat.value.id)
+        console.log('📤 ChatWidget sending message:', content)
         
-        const response = await chatService.getChatMessages(currentChat.value.id)
-        messages.value = response.data.messages || []
+        // ✅ FIXED: Use centralized store method
+        await chatStore.sendMessage(currentChat.value.id, content)
         
-        console.log('✅ Messages loaded:', messages.value)
-        
-        // Mark messages as read
-        await markAsRead()
-        
-        // Scroll to bottom
-        await nextTick()
-        scrollToBottom()
-        
+        console.log('✅ ChatWidget message sent via store')
+
       } catch (error) {
-        console.error('❌ Error fetching messages:', error)
+        console.error('❌ ChatWidget error sending message:', error)
+        toast.error('Failed to send message')
+        newMessage.value = content // Restore on error
+      } finally {
+        sending.value = false
       }
     }
-    
-    // ✅ FIXED: Proper message sending
-    const sendMessage = async () => {
-  if (!newMessage.value.trim() || sending.value || !currentChat.value) return
-
-  const content = newMessage.value.trim()
-  const tempMessage = {
-    id: 'temp-' + Date.now(),
-    content,
-    senderId: authStore.user.id,
-    createdAt: new Date().toISOString(),
-    sender: authStore.user
-  }
-
-  // Add message optimistically to UI
-  messages.value.push(tempMessage)
-  newMessage.value = ''
-  sending.value = true
-
-  // Scroll to bottom immediately
-  await nextTick()
-  scrollToBottom()
-
-  try {
-    console.log('📤 Sending message:', content)
-
-    // Chỉ gửi qua API
-    const response = await chatService.sendMessage(currentChat.value.id, content)
-
-    console.log('✅ Message sent:', response.data)
-
-    // Replace temp message with real message
-    const messageIndex = messages.value.findIndex(m => m.id === tempMessage.id)
-    if (messageIndex !== -1) {
-      messages.value[messageIndex] = response.data
-    }
-
-  } catch (error) {
-    console.error('❌ Error sending message:', error)
-    toast.error('Failed to send message')
-
-    // Remove temp message on error
-    const messageIndex = messages.value.findIndex(m => m.id === tempMessage.id)
-    if (messageIndex !== -1) {
-      messages.value.splice(messageIndex, 1)
-    }
-
-    // Restore message content
-    newMessage.value = content
-  } finally {
-    sending.value = false
-  }
-}
     
     const handleTyping = () => {
       if (!currentChat.value) return
@@ -372,7 +324,7 @@ export default {
       if (!currentChat.value) return
       
       try {
-        await chatService.markMessagesAsRead(currentChat.value.id)
+        await chatStore.markAsRead(currentChat.value.id)
         unreadCount.value = 0
       } catch (error) {
         console.error('Error marking as read:', error)
@@ -412,61 +364,26 @@ export default {
       isOpen.value = false
       isMinimized.value = false
       currentChat.value = null
-      messages.value = []
       typingUsers.value.clear()
       unreadCount.value = 0
       clearTyping()
     }
     
-    // ✅ FIXED: Socket event handlers
-    const handleNewMessage = (message) => {
-      if (message.chatId === currentChat.value?.id) {
-        console.log('📨 New message received:', message)
-        
-        // Add message if not already exists
-        const exists = messages.value.some(m => m.id === message.id)
-        if (!exists) {
-          messages.value.push(message)
-          nextTick(() => scrollToBottom())
-        }
-        
-        if (isOpen.value) {
-          markAsRead()
-        } else {
-          unreadCount.value++
-        }
-      }
-    }
-    
-    const handleUserTyping = (data) => {
-      if (data.chatId === currentChat.value?.id && data.userId !== authStore.user?.id) {
-        if (data.isTyping) {
-          typingUsers.value.set(data.userId, data.userName)
-        } else {
-          typingUsers.value.delete(data.userId)
-        }
-      }
-    }
-    
-    // Lifecycle
-    onMounted(() => {
-      // Setup socket listeners
-      socketService.onNewMessage(handleNewMessage)
-      socketService.onUserTyping(handleUserTyping)
-    })
-    
-    onUnmounted(() => {
-      // Clean up
-      socketService.off('new-message', handleNewMessage)
-      socketService.off('user-typing', handleUserTyping)
-      closeChat()
-    })
-    
-    // Watch for new messages to scroll
-    watch(() => messages.value.length, () => {
+    // ✅ FIXED: Watch for message changes from store
+    watch(messages, () => {
       if (isOpen.value) {
         nextTick(() => scrollToBottom())
       }
+    }, { deep: true })
+    
+    // Lifecycle
+    onMounted(() => {
+      console.log('🔧 ChatWidget mounted')
+    })
+    
+    onUnmounted(() => {
+      console.log('🔧 ChatWidget unmounted')
+      closeChat()
     })
     
     return {
@@ -479,7 +396,7 @@ export default {
       messagesContainer,
       messageInput,
       currentChat,
-      messages,
+      messages, // ✅ FIXED: From computed
       typingUsers,
       unreadCount,
       
@@ -514,6 +431,7 @@ export default {
 </script>
 
 <style scoped lang="scss">
+// ... same styles as before
 @import '@/assets/styles/variables';
 
 .chat-widget {

@@ -64,8 +64,8 @@
 ## 📂 Cấu trúc thư mục
 
 ```bash
-online-marketplace/
-├── marketplace-frontend/       # Vue.js + Vite project
+Online_Marketplace/
+├── marketplace_fe/       # Vue.js + Vite project
 │   ├── src/
 │   │   ├── assets/            # Images, styles
 │   │   ├── components/        # Reusable components
@@ -76,7 +76,7 @@ online-marketplace/
 │   │   └── utils/            # Helper functions
 │   └── package.json
 │
-├── marketplace-backend/        # NestJS project
+├── marketplace_be/        # NestJS project
 │   ├── src/
 │   │   ├── auth/             # Authentication module
 │   │   ├── users/            # Users module
@@ -112,7 +112,7 @@ online-marketplace/
 ### 1️⃣ Clone dự án
 
 ```bash
-git clone https://github.com/yourusername/online-marketplace.git
+git clone https://github.com/yourusername/OnlineMarketplace.git
 cd online-marketplace
 ```
 
@@ -122,7 +122,7 @@ cd online-marketplace
 
 1. **Di chuyển vào thư mục backend:**
    ```bash
-   cd marketplace-backend
+   cd marketplace_be
    ```
 
 2. **Cài đặt dependencies:**
@@ -135,45 +135,14 @@ cd online-marketplace
    cp .env.example .env
    ```
 
-4. **Cập nhật file `.env`:**
-   ```env
-   NODE_ENV=development
-   PORT=3000
-
-   # Database
-   DATABASE_URL="postgresql://user:password@localhost:5432/marketplace"
-
-   # JWT
-   JWT_SECRET=your-super-secret-jwt-key
-   JWT_EXPIRATION=7d
-
-   # Stripe
-   STRIPE_SECRET_KEY=sk_test_your_stripe_test_key
-   STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-
-   # Frontend URL
-   FRONTEND_URL=http://localhost:8080
-   ```
-
-5. **Khởi động PostgreSQL với Docker (optional):**
+4. **Khởi động PostgreSQL với Docker (optional):**
    ```bash
    docker-compose up -d
    ```
 
-6. **Chạy migrations:**
+5. **Chạy backend:**
    ```bash
-   npx prisma migrate dev --name init
-   npx prisma generate
-   ```
-
-7. **Seed database (optional):**
-   ```bash
-   npx prisma db seed
-   ```
-
-8. **Chạy backend:**
-   ```bash
-   npm run start:dev
+   npm start
    ```
 
 Backend sẽ chạy tại: `http://localhost:3000/api/v1`
@@ -184,7 +153,7 @@ Backend sẽ chạy tại: `http://localhost:3000/api/v1`
 
 1. **Mở terminal mới và di chuyển vào thư mục frontend:**
    ```bash
-   cd marketplace-frontend
+   cd marketplace_fe
    ```
 
 2. **Cài đặt dependencies:**
@@ -197,50 +166,12 @@ Backend sẽ chạy tại: `http://localhost:3000/api/v1`
    cp .env.example .env
    ```
 
-4. **Cập nhật file `.env`:**
-   ```env
-   VITE_API_URL=http://localhost:3000/api/v1
-   VITE_STRIPE_PUBLIC_KEY=pk_test_your_stripe_public_key
-   ```
-
-5. **Chạy frontend:**
+4. **Chạy frontend:**
    ```bash
    npm run dev
    ```
 
-Frontend sẽ chạy tại: `http://localhost:8080`
-
----
-
-## 🔑 Tài khoản test
-
-### Admin
-- Email: admin@marketplace.com
-- Password: admin123
-
-### User
-- Email: user@example.com
-- Password: password123
-
-### Stripe Test Cards
-- Success: 4242 4242 4242 4242
-- Decline: 4000 0000 0000 0002
-
----
-
-## 📸 Screenshots
-
-### Homepage
-![Homepage](./screenshots/homepage.png)
-
-### Product List
-![Products](./screenshots/products.png)
-
-### Shopping Cart
-![Cart](./screenshots/cart.png)
-
-### Admin Dashboard
-![Admin](./screenshots/admin.png)
+Frontend sẽ chạy tại: `http://localhost:3000`
 
 ---
 
@@ -248,13 +179,13 @@ Frontend sẽ chạy tại: `http://localhost:8080`
 
 ### Build Frontend
 ```bash
-cd marketplace-frontend
+cd marketplace_fe
 npm run build
 ```
 
 ### Build Backend
 ```bash
-cd marketplace-backend
+cd marketplace_be
 npm run build
 ```
 
@@ -269,49 +200,12 @@ docker-compose -f docker-compose.production.yml up -d
 
 API documentation có thể truy cập tại: `http://localhost:3000/api/docs`
 
-### Ví dụ API Endpoints:
-
-```bash
-# Auth
-POST   /api/v1/auth/register
-POST   /api/v1/auth/login
-
-# Products
-GET    /api/v1/products
-GET    /api/v1/products/:id
-POST   /api/v1/products
-PUT    /api/v1/products/:id
-DELETE /api/v1/products/:id
-
-# Orders
-GET    /api/v1/orders
-POST   /api/v1/orders
-GET    /api/v1/orders/:id
-```
-
----
-
-## 🤝 Đóng góp
-
-1. Fork project
-2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Mở Pull Request
-
----
-
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
 
 ## 📧 Liên hệ
 
-Your Name - [@yourtwitter](https://twitter.com/yourtwitter) - email@example.com
+0509_Nguyễn Đỗ Quốc Huy - baohuynguyendo@gmail.com
 
-Project Link: [https://github.com/yourusername/online-marketplace](https://github.com/yourusername/online-marketplace)
+Project Link: [https://github.com/ZQKiren/OnlineMarketplace.git]
 
 ---
 

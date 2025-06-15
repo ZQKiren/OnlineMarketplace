@@ -1,4 +1,4 @@
-<!-- src/views/chat/ChatRoom.vue -->
+<!-- src/views/chat/ChatRoom.vue - FIXED SYNC VERSION -->
 <template>
   <div class="chat-room-container">
     <div class="container">
@@ -98,7 +98,7 @@
                   </button>
                 </div>
 
-                <!-- Messages -->
+                <!-- ✅ FIXED: Use centralized messages -->
                 <div 
                   v-for="message in currentMessages" 
                   :key="message.id"
@@ -213,7 +213,6 @@ export default {
     
     // State
     const selectedChat = ref(null)
-    const currentMessages = ref([])
     const newMessage = ref('')
     const sending = ref(false)
     const loadingMore = ref(false)
@@ -225,6 +224,11 @@ export default {
     const archiving = ref(false)
     const messagesContainer = ref(null)
     const messageInput = ref(null)
+    
+    // ✅ FIXED: Use centralized messages from store
+    const currentMessages = computed(() => {
+      return selectedChat.value ? chatStore.getChatMessages(selectedChat.value.id) : []
+    })
     
     // Computed
     const isMobile = computed(() => window.innerWidth <= 768)
@@ -314,6 +318,8 @@ export default {
     const handleChatSelected = async (chat) => {
       if (selectedChat.value?.id === chat.id) return
       
+      console.log('💬 ChatRoom selecting chat:', chat.id)
+      
       // Leave previous chat room
       if (selectedChat.value) {
         socketService.leaveChat(selectedChat.value.id)
@@ -325,7 +331,7 @@ export default {
       // Join new chat room
       socketService.joinChat(chat.id)
       
-      // Fetch messages
+      // ✅ FIXED: Load messages using centralized store
       await loadMessages()
       
       // Mark as read
@@ -336,20 +342,22 @@ export default {
       messageInput.value?.focus()
     }
     
+    // ✅ FIXED: Load messages using centralized store
     const loadMessages = async () => {
       if (!selectedChat.value) return
       
       try {
+        console.log('📨 ChatRoom loading messages for:', selectedChat.value.id)
+        
         currentPage.value = 1
         const response = await chatStore.fetchMessages(selectedChat.value.id, 1, 50)
-        currentMessages.value = response.messages
-        hasMoreMessages.value = response.pagination.totalPages > 1
+        hasMoreMessages.value = response.pagination?.totalPages > 1
         
         await nextTick()
         scrollToBottom()
         
       } catch (error) {
-        console.error('Error loading messages:', error)
+        console.error('❌ ChatRoom error loading messages:', error)
       }
     }
     
@@ -361,18 +369,17 @@ export default {
         const nextPage = currentPage.value + 1
         const response = await chatStore.fetchMessages(selectedChat.value.id, nextPage, 50)
         
-        // Prepend older messages
-        currentMessages.value.unshift(...response.messages)
         currentPage.value = nextPage
-        hasMoreMessages.value = nextPage < response.pagination.totalPages
+        hasMoreMessages.value = nextPage < response.pagination?.totalPages
         
       } catch (error) {
-        console.error('Error loading more messages:', error)
+        console.error('❌ Error loading more messages:', error)
       } finally {
         loadingMore.value = false
       }
     }
     
+    // ✅ FIXED: Send message using centralized store
     const sendMessage = async () => {
       if (!newMessage.value.trim() || sending.value || !selectedChat.value) return
       
@@ -381,10 +388,15 @@ export default {
       sending.value = true
       
       try {
-        socketService.sendMessage(selectedChat.value.id, content)
+        console.log('📤 ChatRoom sending message:', content)
+        
+        // ✅ FIXED: Use centralized store method
+        await chatStore.sendMessage(selectedChat.value.id, content)
+        
+        console.log('✅ ChatRoom message sent via store')
         clearTyping()
       } catch (error) {
-        console.error('Error sending message:', error)
+        console.error('❌ ChatRoom error sending message:', error)
         toast.error('Failed to send message')
         newMessage.value = content
       } finally {
@@ -427,11 +439,10 @@ export default {
     }
     
     const goBackToList = () => {
-      selectedChat.value = null
-      currentMessages.value = []
       if (selectedChat.value) {
         socketService.leaveChat(selectedChat.value.id)
       }
+      selectedChat.value = null
     }
     
     const goToProduct = () => {
@@ -454,17 +465,17 @@ export default {
         goBackToList()
         
       } catch (error) {
-        console.error('Error archiving chat:', error)
+        console.error('❌ Error archiving chat:', error)
         toast.error('Failed to archive conversation')
       } finally {
         archiving.value = false
       }
     }
     
-    // Socket event handlers
+    // Socket event handlers - These are handled by the centralized store now
     const handleNewMessage = (message) => {
+      console.log('📨 ChatRoom received new message (handled by store):', message.id)
       if (message.chatId === selectedChat.value?.id) {
-        currentMessages.value.push(message)
         socketService.markRead(selectedChat.value.id)
         nextTick(() => scrollToBottom())
       }
@@ -482,17 +493,23 @@ export default {
     
     const handleMessagesRead = (data) => {
       if (data.chatId === selectedChat.value?.id) {
-        currentMessages.value.forEach(msg => {
-          if (msg.senderId !== data.userId) {
-            msg.isRead = true
-          }
-        })
+        // Messages read indicators would be updated here
+        console.log('✅ Messages read by:', data.userId)
       }
     }
     
+    // ✅ FIXED: Watch for message changes from centralized store
+    watch(currentMessages, () => {
+      if (selectedChat.value) {
+        nextTick(() => scrollToBottom())
+      }
+    }, { deep: true })
+    
     // Lifecycle
     onMounted(async () => {
-      // Setup socket listeners
+      console.log('🔧 ChatRoom mounted')
+      
+      // Setup socket listeners (for UI-specific events)
       socketService.onNewMessage(handleNewMessage)
       socketService.onUserTyping(handleUserTyping)
       socketService.onMessagesRead(handleMessagesRead)
@@ -504,7 +521,7 @@ export default {
           const chat = await chatStore.fetchChatById(chatId)
           await handleChatSelected(chat)
         } catch (error) {
-          console.error('Error loading specific chat:', error)
+          console.error('❌ Error loading specific chat:', error)
           router.push('/chat')
         }
       }
@@ -518,6 +535,8 @@ export default {
     })
     
     onUnmounted(() => {
+      console.log('🔧 ChatRoom unmounted')
+      
       // Clean up socket listeners
       socketService.off('new-message', handleNewMessage)
       socketService.off('user-typing', handleUserTyping)
@@ -531,15 +550,10 @@ export default {
       clearTyping()
     })
     
-    // Watch for new messages to auto-scroll
-    watch(() => currentMessages.value.length, () => {
-      nextTick(() => scrollToBottom())
-    })
-    
     return {
       // State
       selectedChat,
-      currentMessages,
+      currentMessages, // ✅ FIXED: From computed
       newMessage,
       sending,
       loadingMore,
@@ -579,6 +593,7 @@ export default {
 </script>
 
 <style scoped lang="scss">
+// ... same styles as before
 @import '@/assets/styles/variables';
 
 .chat-room-container {
@@ -1013,4 +1028,3 @@ export default {
   }
 }
 </style>
-

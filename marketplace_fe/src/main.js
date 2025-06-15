@@ -1,4 +1,4 @@
-// src/main.js
+// src/main.js - FIXED VERSION
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
@@ -8,18 +8,24 @@ import 'vue-toastification/dist/index.css'
 
 // Import Materialize CSS và JS
 import 'materialize-css/dist/css/materialize.min.css'
-import 'materialize-css/dist/js/materialize.min.js'  // ← THIẾU DÒNG NÀY
+import M from 'materialize-css/dist/js/materialize.min.js' // ✅ FIX: Import M properly
 
 import 'material-design-icons/iconfont/material-icons.css'
 import './assets/styles/main.scss'
 
+// ✅ FIX: Import stores BEFORE using them
+import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
 import socketService from './services/socket.service'
+
 // Làm cho Materialize M object có thể truy cập globally
-window.M = M  // ← THIẾU DÒNG NÀY
+window.M = M
 
 const app = createApp(App)
+const pinia = createPinia()
 
-app.use(createPinia())
+// ✅ IMPORTANT: Setup pinia BEFORE mounting
+app.use(pinia)
 app.use(router)
 app.use(Toast, {
   position: 'top-right',
@@ -29,29 +35,71 @@ app.use(Toast, {
   pauseOnHover: true,
 })
 
+// ✅ Mount app first
 app.mount('#app')
 
-// ✨ NEW: Initialize socket connection after app is mounted
-// Wait for auth store to be ready
-const authStore = useAuthStore()
-
-// Connect socket when user is authenticated
-if (authStore.token) {
-  socketService.connect()
+// ✅ FIXED: Initialize stores and socket AFTER app is mounted
+const initializeApp = async () => {
+  try {
+    // Initialize stores
+    const authStore = useAuthStore()
+    const chatStore = useChatStore()
+    
+    console.log('🚀 App initialized with stores')
+    
+    // Fetch user profile if token exists
+    if (authStore.token) {
+      try {
+        await authStore.fetchProfile()
+        console.log('✅ User profile loaded')
+        
+        // Connect socket after successful auth
+        socketService.connect(authStore, chatStore)
+        console.log('🔌 Socket connected')
+      } catch (error) {
+        console.error('❌ Failed to load user profile:', error)
+        authStore.logout()
+      }
+    }
+    
+    // ✅ FIX: Proper auth state watching
+    let isWatching = false
+    const watchAuthChanges = () => {
+      if (isWatching) return
+      isWatching = true
+      
+      // Watch for auth changes
+      let previousAuthState = authStore.isAuthenticated
+      
+      setInterval(() => {
+        const currentAuthState = authStore.isAuthenticated
+        
+        if (currentAuthState !== previousAuthState) {
+          console.log('🔄 Auth state changed:', currentAuthState)
+          
+          if (currentAuthState && authStore.token) {
+            // User logged in
+            socketService.connect(authStore, chatStore)
+          } else {
+            // User logged out
+            socketService.disconnect()
+          }
+          previousAuthState = currentAuthState
+        }
+      }, 1000)
+    }
+    
+    watchAuthChanges()
+    
+  } catch (error) {
+    console.error('❌ App initialization error:', error)
+  }
 }
 
-// Watch for auth changes to connect/disconnect socket
-let previousAuthState = authStore.isAuthenticated
+// Initialize after DOM is ready
+setTimeout(initializeApp, 100)
 
-setInterval(() => {
-  const currentAuthState = authStore.isAuthenticated
-  
-  if (currentAuthState !== previousAuthState) {
-    if (currentAuthState) {
-      socketService.connect()
-    } else {
-      socketService.disconnect()
-    }
-    previousAuthState = currentAuthState
-  }
-}, 1000)
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  socketService.disconnect()
+})
