@@ -1,30 +1,42 @@
 <!-- src/App.vue -->
 <template>
   <div id="app">
-    <Navbar />
-    <main class="main-content">
+    <!-- Conditionally show Navbar -->
+    <Navbar v-if="!$route.meta.hideNavbar" />
+    
+    <!-- Main content with conditional padding -->
+    <main class="main-content" :class="{ 'auth-layout': isAuthPage }">
       <router-view v-slot="{ Component }" :key="$route.fullPath">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
         </transition>
       </router-view>
     </main>
-    <Footer />
+    
+    <!-- Conditionally show Footer -->
+    <Footer v-if="!$route.meta.hideFooter" />
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Navbar from '@/components/common/Navbar.vue'
 import Footer from '@/components/common/Footer.vue'
 
+const route = useRoute()
 const authStore = useAuthStore()
+
+// Check if current page is auth page
+const isAuthPage = computed(() => {
+  return route.meta.hideNavbar || route.meta.hideFooter
+})
 
 onMounted(() => {
   // BỎ M.AutoInit() để tránh conflict với Navbar
   // Manual init trong từng component sẽ stable hơn
-  
+   
   // Fetch user profile if token exists
   if (authStore.token) {
     authStore.fetchProfile()
@@ -43,14 +55,19 @@ onMounted(() => {
   flex: 1;
   padding-top: 20px;
   padding-bottom: 40px;
+  
+  // Remove padding for auth pages
+  &.auth-layout {
+    padding: 0;
+  }
 }
 
-.fade-enter-active,
+.fade-enter-active, 
 .fade-leave-active {
   transition: opacity 0.3s ease;
 }
 
-.fade-enter-from,
+.fade-enter-from, 
 .fade-leave-to {
   opacity: 0;
 }

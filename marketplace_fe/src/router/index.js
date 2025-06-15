@@ -9,18 +9,26 @@ const routes = [
     name: 'home',
     component: Home,
   },
-  // Auth routes
+  // Auth routes - Updated with meta properties
   {
     path: '/login',
     name: 'login',
     component: () => import('@/views/auth/Login.vue'),
-    meta: { guest: true },
+    meta: { 
+      guest: true,
+      hideNavbar: true,
+      hideFooter: true
+    },
   },
   {
     path: '/register',
     name: 'register',
     component: () => import('@/views/auth/Register.vue'),
-    meta: { guest: true },
+    meta: { 
+      guest: true,
+      hideNavbar: true,
+      hideFooter: true
+    },
   },
   // Product routes
   {
@@ -103,7 +111,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
   // Admin routes
-  // src/router/index.js - Thêm route trong admin section
   {
     path: '/admin',
     redirect: '/admin/dashboard',

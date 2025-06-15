@@ -1,6 +1,6 @@
-<!-- src/components/product/ProductReviews.vue -->
 <template>
   <div class="product-reviews">
+    <!-- Reviews Header -->
     <div class="reviews-header">
       <h5>Customer Reviews</h5>
       <div class="reviews-summary" v-if="stats">
@@ -83,7 +83,7 @@
           <label class="form-label">Your Review</label>
           <textarea 
             v-model="newReview.comment"
-            class="materialize-textarea"
+            class="textarea"
             placeholder="Share your experience with this product..."
             maxlength="500"
             rows="4"
@@ -98,7 +98,7 @@
         <div class="form-actions">
           <button 
             type="button" 
-            class="btn-flat waves-effect"
+            class="btn-flat"
             @click="toggleReviewForm"
             :disabled="submitting"
           >
@@ -106,7 +106,7 @@
           </button>
           <button 
             type="submit" 
-            class="btn waves-effect waves-light"
+            class="btn"
             :disabled="!newReview.rating || submitting"
           >
             <i class="material-icons left">{{ submitting ? 'hourglass_empty' : 'send' }}</i>
@@ -119,7 +119,7 @@
     <!-- Review Action Button -->
     <div v-else-if="canReview && !hasReviewed" class="review-action">
       <button 
-        class="btn waves-effect waves-light"
+        class="btn"
         @click="toggleReviewForm"
       >
         <i class="material-icons left">rate_review</i>
@@ -141,11 +141,7 @@
         <label>Filter by rating:</label>
         <select v-model="selectedFilter" @change="filterReviews" class="browser-default">
           <option value="">All reviews</option>
-          <option value="5">5 stars</option>
-          <option value="4">4 stars</option>
-          <option value="3">3 stars</option>
-          <option value="2">2 stars</option>
-          <option value="1">1 star</option>
+          <option v-for="star in [5, 4, 3, 2, 1]" :key="star" :value="star">{{ star }} stars</option>
         </select>
       </div>
       
@@ -162,14 +158,7 @@
     
     <!-- Loading State -->
     <div v-if="loading" class="reviews-loading">
-      <div class="preloader-wrapper small active">
-        <div class="spinner-layer spinner-blue-only">
-          <div class="circle-clipper left">
-            <div class="circle"></div>
-          </div>
-        </div>
-      </div>
-      <span>Loading reviews...</span>
+      <LoadingSpinner text="Loading reviews..." />
     </div>
     
     <!-- Reviews List -->
@@ -211,7 +200,7 @@
             <div class="comment-input">
               <textarea 
                 v-model="editForm.comment"
-                class="materialize-textarea"
+                class="textarea"
                 placeholder="Update your review..."
                 maxlength="500"
                 rows="3"
@@ -232,7 +221,7 @@
               </button>
               <button 
                 type="submit" 
-                class="btn waves-effect waves-light"
+                class="btn"
                 :disabled="updating"
               >
                 <i class="material-icons left">{{ updating ? 'hourglass_empty' : 'save' }}</i>
@@ -271,16 +260,16 @@
             <!-- Review Actions -->
             <div v-if="review.user.id === authStore.user?.id" class="review-actions">
               <button 
-                class="btn-flat btn-small tooltipped"
-                data-tooltip="Edit review"
+                class="btn-flat btn-small"
+                title="Edit review"
                 @click="startEdit(review)"
                 :disabled="loading"
               >
                 <i class="material-icons">edit</i>
               </button>
               <button 
-                class="btn-flat btn-small tooltipped"
-                data-tooltip="Delete review"
+                class="btn-flat btn-small"
+                title="Delete review"
                 @click="confirmDelete(review.id)"
                 :disabled="loading"
               >
@@ -346,14 +335,16 @@
 </template>
 
 <script>
+import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import reviewService from '@/services/review.service'
 import { getStaticUrl } from '@/services/api'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 export default {
   name: 'ProductReviews',
-  
+  components: { LoadingSpinner },
   props: {
     productId: {
       type: String,
@@ -364,67 +355,58 @@ export default {
       default: false
     }
   },
-  
   emits: ['review-added', 'review-updated'],
   
   setup() {
     const authStore = useAuthStore()
     const toast = useToast()
     
-    return {
-      authStore,
-      toast
-    }
-  },
-  
-  data() {
-    return {
-      reviews: [],
-      filteredReviews: [],
-      stats: null,
-      loading: false,
-      submitting: false,
-      updating: false,
-      showReviewForm: false,
-      editingReview: null,
-      selectedFilter: '',
-      sortBy: 'newest',
-      currentPage: 1,
-      reviewsPerPage: 10,
-      hoverRating: 0,
-      
-      newReview: {
-        rating: 0,
-        comment: ''
-      },
-      
-      editForm: {
-        rating: 0,
-        comment: ''
+    const reviews = ref([])
+    const stats = ref(null)
+    const loading = ref(false)
+    const submitting = ref(false)
+    const updating = ref(false)
+    const showReviewForm = ref(false)
+    const editingReview = ref(null)
+    const selectedFilter = ref('')
+    const sortBy = ref('newest')
+    const currentPage = ref(1)
+    const reviewsPerPage = ref(10)
+    const hoverRating = ref(0)
+    const newReview = ref({ rating: 0, comment: '' })
+    const editForm = ref({ rating: 0, comment: '' })
+
+    // Computed properties for optimized filtering and sorting
+    const filteredReviews = computed(() => {
+      if (!selectedFilter.value) return [...reviews.value]
+      return reviews.value.filter(r => r.rating == selectedFilter.value)
+    })
+
+    const sortedReviews = computed(() => {
+      const sortFunctions = {
+        newest: (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+        oldest: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+        highest: (a, b) => b.rating - a.rating,
+        lowest: (a, b) => a.rating - b.rating
       }
-    }
-  },
-  
-  computed: {
-    hasReviewed() {
-      return this.reviews.some(r => r.user.id === this.authStore.user?.id)
-    },
-    
-    totalPages() {
-      return Math.ceil(this.filteredReviews.length / this.reviewsPerPage)
-    },
-    
-    paginatedReviews() {
-      const start = (this.currentPage - 1) * this.reviewsPerPage
-      const end = start + this.reviewsPerPage
-      return this.filteredReviews.slice(start, end)
-    },
-    
-    visiblePages() {
+      return [...filteredReviews.value].sort(sortFunctions[sortBy.value])
+    })
+
+    const paginatedReviews = computed(() => {
+      const start = (currentPage.value - 1) * reviewsPerPage.value
+      const end = start + reviewsPerPage.value
+      return sortedReviews.value.slice(start, end)
+    })
+
+    const totalPages = computed(() => {
+      return Math.ceil(filteredReviews.value.length / reviewsPerPage.value)
+    })
+
+    const visiblePages = computed(() => {
       const pages = []
-      const total = this.totalPages
-      const current = this.currentPage
-      
+      const total = totalPages.value
+      const current = currentPage.value
+
       if (total <= 7) {
         for (let i = 1; i <= total; i++) pages.push(i)
       } else {
@@ -438,42 +420,52 @@ export default {
           pages.push(1, '...', current - 1, current, current + 1, '...', total)
         }
       }
-      
       return pages
+    })
+
+    const hasReviewed = computed(() => {
+      return reviews.value.some(r => r.user.id === authStore.user?.id)
+    })
+
+    return {
+      authStore,
+      toast,
+      reviews,
+      stats,
+      loading,
+      submitting,
+      updating,
+      showReviewForm,
+      editingReview,
+      selectedFilter,
+      sortBy,
+      currentPage,
+      reviewsPerPage,
+      hoverRating,
+      newReview,
+      editForm,
+      filteredReviews,
+      sortedReviews,
+      paginatedReviews,
+      totalPages,
+      visiblePages,
+      hasReviewed
     }
-  },
-  
-  async mounted() {
-    await this.fetchReviews()
-    this.initMaterialize()
   },
   
   methods: {
     async fetchReviews() {
       this.loading = true
-      
       try {
         const response = await reviewService.getProductReviews(this.productId)
         this.reviews = response.data.reviews || []
         this.stats = response.data.stats || null
-        this.filteredReviews = [...this.reviews]
-        this.sortReviews()
       } catch (error) {
         console.error('Error fetching reviews:', error)
         this.toast.error('Failed to load reviews')
       } finally {
         this.loading = false
       }
-    },
-    
-    initMaterialize() {
-      this.$nextTick(() => {
-        if (window.M) {
-          window.M.Tooltip.init(document.querySelectorAll('.tooltipped'))
-          window.M.FormSelect.init(document.querySelectorAll('select'))
-          window.M.textareaAutoResize(document.querySelectorAll('textarea'))
-        }
-      })
     },
     
     getDistributionPercentage(rating) {
@@ -512,13 +504,9 @@ export default {
     toggleReviewForm() {
       this.showReviewForm = !this.showReviewForm
       if (!this.showReviewForm) {
-        this.resetReviewForm()
+        this.newReview = { rating: 0, comment: '' }
+        this.hoverRating = 0
       }
-    },
-    
-    resetReviewForm() {
-      this.newReview = { rating: 0, comment: '' }
-      this.hoverRating = 0
     },
     
     setRating(rating) {
@@ -532,17 +520,14 @@ export default {
       }
       
       this.submitting = true
-      
       try {
         await reviewService.createReview({
           productId: this.productId,
           rating: this.newReview.rating,
           comment: this.newReview.comment.trim()
         })
-        
         this.toast.success('Review submitted successfully!')
-        this.resetReviewForm()
-        this.showReviewForm = false
+        this.toggleReviewForm()
         await this.fetchReviews()
         this.$emit('review-added')
       } catch (error) {
@@ -568,13 +553,11 @@ export default {
     
     async saveEdit(reviewId) {
       this.updating = true
-      
       try {
         await reviewService.updateReview(reviewId, {
           rating: this.editForm.rating,
           comment: this.editForm.comment.trim()
         })
-        
         this.toast.success('Review updated successfully!')
         this.cancelEdit()
         await this.fetchReviews()
@@ -606,38 +589,28 @@ export default {
     },
     
     filterReviews() {
-      if (this.selectedFilter) {
-        this.filteredReviews = this.reviews.filter(r => r.rating == this.selectedFilter)
-      } else {
-        this.filteredReviews = [...this.reviews]
-      }
       this.currentPage = 1
-      this.sortReviews()
     },
     
     sortReviews() {
-      const sortFunctions = {
-        newest: (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-        oldest: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
-        highest: (a, b) => b.rating - a.rating,
-        lowest: (a, b) => a.rating - b.rating
-      }
-      
-      this.filteredReviews.sort(sortFunctions[this.sortBy])
+      this.currentPage = 1
     },
     
     clearFilter() {
       this.selectedFilter = ''
-      this.filterReviews()
+      this.currentPage = 1
     },
     
     changePage(page) {
       if (page >= 1 && page <= this.totalPages) {
         this.currentPage = page
-        // Scroll to top of reviews
         this.$el.scrollIntoView({ behavior: 'smooth' })
       }
     }
+  },
+  
+  async mounted() {
+    await this.fetchReviews()
   }
 }
 </script>
@@ -646,20 +619,23 @@ export default {
 @import '@/assets/styles/variables';
 
 .product-reviews {
+  padding: 20px;
+
   .reviews-header {
     display: flex;
-    justify-content: between;
+    justify-content: space-between;
     align-items: center;
-    margin-bottom: $spacing-lg;
+    margin-bottom: 24px;
     
     h5 {
       margin: 0;
       font-weight: 600;
+      color: #333;
     }
     
     .reviews-summary {
       .review-count {
-        color: $secondary-color;
+        color: #666;
         font-size: 0.9rem;
       }
     }
@@ -668,15 +644,15 @@ export default {
   .review-stats {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: $spacing-xl;
-    padding: $spacing-lg;
+    gap: 32px;
+    padding: 24px;
     background: #f8f9fa;
-    border-radius: $border-radius-md;
-    margin-bottom: $spacing-xl;
+    border-radius: 8px;
+    margin-bottom: 32px;
     
-    @media (max-width: $mobile) {
+    @media (max-width: 768px) {
       grid-template-columns: 1fr;
-      gap: $spacing-lg;
+      gap: 24px;
     }
     
     .average-rating {
@@ -684,14 +660,14 @@ export default {
       
       .rating-display {
         .rating-number {
-          font-size: 3.5rem;
+          font-size: 3rem;
           font-weight: 700;
           margin: 0;
           color: $primary-color;
         }
         
         .stars {
-          margin: $spacing-sm 0;
+          margin: 8px 0;
           
           i {
             color: #ffc107;
@@ -701,7 +677,7 @@ export default {
         
         .rating-text {
           margin: 0;
-          color: $secondary-color;
+          color: #666;
           font-size: 0.9rem;
         }
       }
@@ -711,9 +687,9 @@ export default {
       .rating-bar {
         display: grid;
         grid-template-columns: auto auto 1fr auto;
-        gap: $spacing-sm;
+        gap: 12px;
         align-items: center;
-        margin-bottom: $spacing-sm;
+        margin-bottom: 12px;
         
         .rating-label {
           font-weight: 500;
@@ -742,7 +718,7 @@ export default {
           min-width: 30px;
           text-align: right;
           font-size: 0.875rem;
-          color: $secondary-color;
+          color: #666;
         }
       }
     }
@@ -750,21 +726,21 @@ export default {
   
   .no-reviews {
     text-align: center;
-    padding: $spacing-xl;
+    padding: 32px;
     
     i {
       font-size: 4rem;
       color: #ccc;
-      margin-bottom: $spacing-lg;
+      margin-bottom: 16px;
     }
     
     h6 {
-      color: $secondary-color;
-      margin-bottom: $spacing-sm;
+      color: #666;
+      margin-bottom: 8px;
     }
     
     p {
-      color: $secondary-color;
+      color: #666;
       margin: 0;
     }
   }
@@ -773,20 +749,33 @@ export default {
   .review-edit {
     background: white;
     border: 1px solid #e0e0e0;
-    border-radius: $border-radius-md;
-    padding: $spacing-lg;
-    margin-bottom: $spacing-lg;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
     
     .section-header,
     .edit-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: $spacing-lg;
+      margin-bottom: 24px;
       
       h6 {
         margin: 0;
         font-weight: 600;
+        color: #333;
+      }
+      
+      .btn-flat {
+        padding: 0;
+        background: none;
+        border: none;
+        cursor: pointer;
+        
+        i {
+          font-size: 1.5rem;
+          color: #666;
+        }
       }
     }
     
@@ -794,18 +783,18 @@ export default {
     .edit-form {
       .form-label {
         display: block;
-        margin-bottom: $spacing-sm;
+        margin-bottom: 8px;
         font-weight: 500;
-        color: $secondary-color;
+        color: #666;
       }
       
       .rating-input {
-        margin-bottom: $spacing-lg;
+        margin-bottom: 24px;
         
         .star-rating {
           display: flex;
           gap: 4px;
-          margin-bottom: $spacing-sm;
+          margin-bottom: 8px;
           
           .star-btn {
             background: none;
@@ -841,15 +830,17 @@ export default {
       }
       
       .comment-input {
-        margin-bottom: $spacing-lg;
+        margin-bottom: 24px;
         
-        textarea {
+        .textarea {
           border: 1px solid #e0e0e0;
-          border-radius: $border-radius-sm;
-          padding: $spacing-md;
+          border-radius: 4px;
+          padding: 12px;
           font-family: inherit;
           resize: vertical;
           min-height: 100px;
+          width: 100%;
+          box-sizing: border-box;
           
           &:focus {
             border-color: $primary-color;
@@ -860,14 +851,14 @@ export default {
         
         .char-count {
           text-align: right;
-          margin-top: $spacing-xs;
+          margin-top: 4px;
           
           span {
             font-size: 0.75rem;
-            color: $secondary-color;
+            color: #666;
             
             &.near-limit {
-              color: $warning-color;
+              color: #ff9800;
             }
           }
         }
@@ -876,30 +867,94 @@ export default {
       .form-actions {
         display: flex;
         justify-content: flex-end;
-        gap: $spacing-md;
+        gap: 12px;
+        
+        .btn-flat {
+          padding: 8px 16px;
+          background: #f8f9fa;
+          border: 1px solid #e0e0e0;
+          border-radius: 4px;
+          cursor: pointer;
+          color: #666;
+          
+          &:hover {
+            background: #e9ecef;
+          }
+          
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
+        
+        .btn {
+          padding: 8px 16px;
+          background: $primary-color;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          
+          &:hover {
+            background: darken($primary-color, 10%);
+          }
+          
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+          
+          i {
+            font-size: 1.2rem;
+          }
+        }
       }
     }
   }
   
   .review-action {
-    margin-bottom: $spacing-lg;
+    margin-bottom: 24px;
+    
+    .btn {
+      padding: 8px 16px;
+      background: $primary-color;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      &:hover {
+        background: darken($primary-color, 10%);
+      }
+      
+      i {
+        font-size: 1.2rem;
+      }
+    }
   }
   
   .already-reviewed {
-    margin-bottom: $spacing-lg;
+    margin-bottom: 24px;
     
     .notice {
       display: flex;
       align-items: center;
-      gap: $spacing-sm;
-      padding: $spacing-md;
+      gap: 12px;
+      padding: 16px;
       background: #e8f5e8;
       border: 1px solid #4caf50;
-      border-radius: $border-radius-sm;
+      border-radius: 4px;
       color: #2e7d32;
       
       i {
         color: #4caf50;
+        font-size: 1.5rem;
       }
     }
   }
@@ -908,27 +963,27 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: $spacing-lg;
-    padding: $spacing-md;
+    gap: 24px;
+    padding: 16px;
     background: #f8f9fa;
-    border-radius: $border-radius-sm;
-    margin-bottom: $spacing-lg;
+    border-radius: 4px;
+    margin-bottom: 24px;
     
-    @media (max-width: $mobile) {
+    @media (max-width: 768px) {
       flex-direction: column;
       align-items: stretch;
-      gap: $spacing-md;
+      gap: 16px;
     }
     
     .filter-options,
     .sort-options {
       display: flex;
       align-items: center;
-      gap: $spacing-sm;
+      gap: 8px;
       
       label {
         font-weight: 500;
-        color: $secondary-color;
+        color: #666;
         white-space: nowrap;
       }
       
@@ -936,25 +991,24 @@ export default {
         min-width: 150px;
         padding: 4px 8px;
         border: 1px solid #ddd;
-        border-radius: $border-radius-sm;
+        border-radius: 4px;
         background: white;
+        font-size: 0.9rem;
       }
     }
   }
   
   .reviews-loading {
     display: flex;
-    align-items: center;
     justify-content: center;
-    gap: $spacing-md;
-    padding: $spacing-xl;
-    color: $secondary-color;
+    align-items: center;
+    padding: 32px;
   }
   
   .reviews-list {
     .review-item {
       border-bottom: 1px solid #e0e0e0;
-      padding: $spacing-lg 0;
+      padding: 24px 0;
       
       &:last-child {
         border-bottom: none;
@@ -962,9 +1016,9 @@ export default {
       
       &.user-review {
         background: rgba(25, 118, 210, 0.02);
-        margin: 0 (-$spacing-md);
-        padding: $spacing-lg $spacing-md;
-        border-radius: $border-radius-sm;
+        margin: 0 -16px;
+        padding: 24px 16px;
+        border-radius: 4px;
       }
       
       .review-display {
@@ -972,11 +1026,11 @@ export default {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: $spacing-md;
+          margin-bottom: 16px;
           
           .reviewer-info {
             display: flex;
-            gap: $spacing-md;
+            gap: 16px;
             
             .reviewer-avatar {
               width: 50px;
@@ -988,20 +1042,21 @@ export default {
             
             .reviewer-details {
               .reviewer-name {
-                margin: 0 0 $spacing-xs 0;
+                margin: 0 0 8px 0;
                 font-weight: 600;
                 font-size: 1rem;
+                color: #333;
               }
               
               .review-meta {
                 display: flex;
                 align-items: center;
-                gap: $spacing-md;
+                gap: 16px;
                 
-                @media (max-width: $mobile) {
+                @media (max-width: 768px) {
                   flex-direction: column;
                   align-items: flex-start;
-                  gap: $spacing-xs;
+                  gap: 8px;
                 }
                 
                 .stars i {
@@ -1010,13 +1065,13 @@ export default {
                 }
                 
                 .review-date {
-                  color: $secondary-color;
+                  color: #666;
                   font-size: 0.875rem;
                 }
                 
                 .edited-badge {
                   font-size: 0.75rem;
-                  color: $secondary-color;
+                  color: #666;
                   font-style: italic;
                 }
               }
@@ -1025,25 +1080,39 @@ export default {
           
           .review-actions {
             display: flex;
-            gap: $spacing-xs;
+            gap: 8px;
             
-            button {
+            .btn-flat {
               width: 36px;
               height: 36px;
               padding: 0;
+              background: none;
+              border: none;
               display: flex;
               align-items: center;
               justify-content: center;
+              cursor: pointer;
               
               i {
                 font-size: 1.1rem;
+                color: #666;
+              }
+              
+              &:hover {
+                background: rgba(0, 0, 0, 0.1);
+                border-radius: 50%;
+              }
+              
+              &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
               }
             }
           }
         }
         
         .review-content {
-          margin-bottom: $spacing-md;
+          margin-bottom: 16px;
           
           .review-comment {
             color: #333;
@@ -1052,7 +1121,7 @@ export default {
           }
           
           .no-comment {
-            color: $secondary-color;
+            color: #666;
             font-style: italic;
           }
         }
@@ -1060,25 +1129,37 @@ export default {
         .review-footer {
           display: flex;
           align-items: center;
-          gap: $spacing-md;
-          padding-top: $spacing-md;
+          gap: 16px;
+          padding-top: 16px;
           border-top: 1px solid #f0f0f0;
           
           .helpful-text {
             font-size: 0.875rem;
-            color: $secondary-color;
+            color: #666;
           }
           
           .helpful-actions {
             display: flex;
-            gap: $spacing-sm;
+            gap: 8px;
             
-            button {
+            .btn-flat {
               font-size: 0.75rem;
               padding: 4px 8px;
+              background: none;
+              border: none;
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              cursor: pointer;
               
               i {
                 font-size: 0.875rem;
+                color: #666;
+              }
+              
+              &:hover {
+                background: rgba(0, 0, 0, 0.1);
+                border-radius: 4px;
               }
             }
           }
@@ -1089,19 +1170,36 @@ export default {
   
   .no-filtered-reviews {
     text-align: center;
-    padding: $spacing-xl;
-    color: $secondary-color;
+    padding: 32px;
+    color: #666;
+    
+    .btn-flat {
+      padding: 8px 16px;
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #666;
+      
+      &:hover {
+        background: #e9ecef;
+      }
+    }
   }
   
   .pagination-wrapper {
     display: flex;
     justify-content: center;
-    margin-top: $spacing-xl;
+    margin-top: 32px;
     
     .pagination {
+      display: flex;
+      gap: 8px;
+      
       li {
         &.active a {
           background-color: $primary-color;
+          color: white;
         }
         
         &.disabled a {
@@ -1110,7 +1208,10 @@ export default {
         }
         
         a {
+          padding: 8px 12px;
+          border-radius: 4px;
           cursor: pointer;
+          color: #333;
           
           &:hover {
             background-color: rgba(25, 118, 210, 0.1);

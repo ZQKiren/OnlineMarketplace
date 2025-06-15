@@ -1,84 +1,183 @@
 <!-- src/views/auth/Register.vue -->
 <template>
-  <div class="container">
-    <div class="row">
-      <div class="col s12 m8 offset-m2 l6 offset-l3">
-        <div class="card register-card">
-          <div class="card-content">
-            <span class="card-title center-align">Create Account</span>
-            
-            <form @submit.prevent="handleRegister">
-              <div class="row">
-                <div class="input-field col s12">
-                  <i class="material-icons prefix">person</i>
-                  <input 
-                    id="name" 
-                    type="text" 
-                    v-model="form.name"
-                    required
-                  >
-                  <label for="name">Full Name</label>
-                </div>
-                
-                <div class="input-field col s12">
-                  <i class="material-icons prefix">email</i>
-                  <input 
-                    id="email" 
-                    type="email" 
-                    v-model="form.email"
-                    required
-                  >
-                  <label for="email">Email</label>
-                </div>
-                
-                <div class="input-field col s12">
-                  <i class="material-icons prefix">phone</i>
-                  <input 
-                    id="phone" 
-                    type="tel" 
-                    v-model="form.phone"
-                  >
-                  <label for="phone">Phone (Optional)</label>
-                </div>
-                
-                <div class="input-field col s12">
-                  <i class="material-icons prefix">lock</i>
-                  <input 
-                    id="password" 
-                    type="password" 
-                    v-model="form.password"
-                    required
-                    minlength="6"
-                  >
-                  <label for="password">Password</label>
-                  <span class="helper-text">Minimum 6 characters</span>
-                </div>
-                
-                <div class="input-field col s12">
-                  <i class="material-icons prefix">lock_outline</i>
-                  <input 
-                    id="confirmPassword" 
-                    type="password" 
-                    v-model="form.confirmPassword"
-                    required
-                  >
-                  <label for="confirmPassword">Confirm Password</label>
-                </div>
-              </div>
-              
-              <button 
-                type="submit" 
-                class="btn waves-effect waves-light full-width"
-                :disabled="loading"
+  <div class="auth-container">
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <!-- Header -->
+        <div class="auth-header">
+          <div class="logo">
+            <i class="material-icons">store</i>
+            <h1>ShopApp</h1>
+          </div>
+          <h2>Create Account</h2>
+          <p>Join us and start your shopping journey</p>
+        </div>
+
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="error-alert">
+          <i class="material-icons">error_outline</i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Success Message -->
+        <div v-if="successMessage" class="success-alert">
+          <i class="material-icons">check_circle</i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Register Form -->
+        <form @submit.prevent="handleRegister" class="auth-form">
+          <div class="input-group">
+            <div class="input-wrapper">
+              <i class="material-icons">person</i>
+              <input 
+                type="text" 
+                v-model="form.name"
+                :class="{ error: errors.name }"
+                @input="clearFieldError('name')"
+                placeholder="Enter your full name"
+                required
               >
-                {{ loading ? 'Creating Account...' : 'Register' }}
+            </div>
+            <span v-if="errors.name" class="error-text">{{ errors.name }}</span>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <i class="material-icons">email</i>
+              <input 
+                type="email" 
+                v-model="form.email"
+                :class="{ error: errors.email }"
+                @input="clearFieldError('email')"
+                placeholder="Enter your email"
+                required
+              >
+            </div>
+            <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <i class="material-icons">phone</i>
+              <input 
+                type="tel" 
+                v-model="form.phone"
+                :class="{ error: errors.phone }"
+                @input="clearFieldError('phone')"
+                placeholder="Enter your phone (optional)"
+              >
+            </div>
+            <span v-if="errors.phone" class="error-text">{{ errors.phone }}</span>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <i class="material-icons">lock</i>
+              <input 
+                :type="showPassword ? 'text' : 'password'" 
+                v-model="form.password"
+                :class="{ error: errors.password }"
+                @input="clearFieldError('password')"
+                placeholder="Create a password"
+                required
+              >
+              <button 
+                type="button" 
+                class="password-toggle"
+                @click="showPassword = !showPassword"
+              >
+                <i class="material-icons">{{ showPassword ? 'visibility_off' : 'visibility' }}</i>
               </button>
-            </form>
-            
-            <div class="card-action center-align">
-              <p>Already have an account? 
-                <router-link to="/login">Login here</router-link>
-              </p>
+            </div>
+            <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
+            <span v-else class="help-text">Minimum 6 characters</span>
+          </div>
+
+          <div class="input-group">
+            <div class="input-wrapper">
+              <i class="material-icons">lock_outline</i>
+              <input 
+                :type="showConfirmPassword ? 'text' : 'password'" 
+                v-model="form.confirmPassword"
+                :class="{ error: errors.confirmPassword }"
+                @input="clearFieldError('confirmPassword')"
+                placeholder="Confirm your password"
+                required
+              >
+              <button 
+                type="button" 
+                class="password-toggle"
+                @click="showConfirmPassword = !showConfirmPassword"
+              >
+                <i class="material-icons">{{ showConfirmPassword ? 'visibility_off' : 'visibility' }}</i>
+              </button>
+            </div>
+            <span v-if="errors.confirmPassword" class="error-text">{{ errors.confirmPassword }}</span>
+          </div>
+
+          <div class="terms-wrapper">
+            <label class="terms-checkbox">
+              <input 
+                type="checkbox" 
+                v-model="form.agreeTerms"
+                :class="{ error: errors.agreeTerms }"
+              >
+              <span class="checkmark"></span>
+              <span class="terms-text">
+                I agree to the 
+                <a href="/terms" target="_blank">Terms of Service</a> 
+                and 
+                <a href="/privacy" target="_blank">Privacy Policy</a>
+              </span>
+            </label>
+            <span v-if="errors.agreeTerms" class="error-text">{{ errors.agreeTerms }}</span>
+          </div>
+
+          <button 
+            type="submit" 
+            class="auth-btn"
+            :disabled="loading"
+          >
+            <span v-if="loading" class="loading-spinner"></span>
+            <span v-else>Create Account</span>
+          </button>
+        </form>
+
+        <!-- Footer -->
+        <div class="auth-footer">
+          <p>Already have an account? 
+            <router-link to="/login">Sign in here</router-link>
+          </p>
+        </div>
+      </div>
+
+      <!-- Side Panel -->
+      <div class="side-panel">
+        <div class="side-content">
+          <div class="side-illustration">
+            <i class="material-icons">account_circle</i>
+            <i class="material-icons">shopping_bag</i>
+            <i class="material-icons">card_giftcard</i>
+          </div>
+          <h3>Join Our Community</h3>
+          <p>Create your account to unlock exclusive deals, personalized recommendations, and seamless shopping experience.</p>
+          <div class="benefits">
+            <div class="benefit">
+              <i class="material-icons">local_offer</i>
+              <span>Exclusive Offers</span>
+            </div>
+            <div class="benefit">
+              <i class="material-icons">star</i>
+              <span>Loyalty Rewards</span>
+            </div>
+            <div class="benefit">
+              <i class="material-icons">track_changes</i>
+              <span>Order Tracking</span>
+            </div>
+            <div class="benefit">
+              <i class="material-icons">favorite</i>
+              <span>Wishlist</span>
             </div>
           </div>
         </div>
@@ -88,10 +187,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
+import { validators } from '@/utils/validators'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -102,26 +202,174 @@ const form = ref({
   email: '',
   phone: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  agreeTerms: false
 })
 
 const loading = ref(false)
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
+const errors = reactive({
+  name: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  agreeTerms: ''
+})
+
+const clearFieldError = (field) => {
+  errors[field] = ''
+  if (errorMessage.value) {
+    errorMessage.value = ''
+  }
+}
+
+const clearAllErrors = () => {
+  errorMessage.value = ''
+  successMessage.value = ''
+  Object.keys(errors).forEach(key => {
+    errors[key] = ''
+  })
+}
+
+const validateForm = () => {
+  clearAllErrors()
+  let isValid = true
+  
+  // Validate name
+  const nameResult = validators.required(form.value.name)
+  if (nameResult !== true) {
+    errors.name = nameResult
+    isValid = false
+  } else {
+    const nameLength = validators.minLength(2)(form.value.name)
+    if (nameLength !== true) {
+      errors.name = nameLength
+      isValid = false
+    }
+  }
+  
+  // Validate email
+  const emailRequired = validators.required(form.value.email)
+  if (emailRequired !== true) {
+    errors.email = emailRequired
+    isValid = false
+  } else {
+    const emailFormat = validators.email(form.value.email)
+    if (emailFormat !== true) {
+      errors.email = emailFormat
+      isValid = false
+    }
+  }
+  
+  // Validate phone (optional)
+  if (form.value.phone) {
+    const phoneResult = validators.phoneNumber(form.value.phone)
+    if (phoneResult !== true) {
+      errors.phone = phoneResult
+      isValid = false
+    }
+  }
+  
+  // Validate password
+  const passwordRequired = validators.required(form.value.password)
+  if (passwordRequired !== true) {
+    errors.password = passwordRequired
+    isValid = false
+  } else {
+    const passwordLength = validators.password(form.value.password)
+    if (passwordLength !== true) {
+      errors.password = passwordLength
+      isValid = false
+    }
+  }
+  
+  // Validate confirm password
+  const confirmPasswordRequired = validators.required(form.value.confirmPassword)
+  if (confirmPasswordRequired !== true) {
+    errors.confirmPassword = confirmPasswordRequired
+    isValid = false
+  } else {
+    const confirmPasswordMatch = validators.confirmPassword(form.value.password)(form.value.confirmPassword)
+    if (confirmPasswordMatch !== true) {
+      errors.confirmPassword = confirmPasswordMatch
+      isValid = false
+    }
+  }
+  
+  // Validate terms agreement
+  if (!form.value.agreeTerms) {
+    errors.agreeTerms = 'You must agree to the terms and conditions'
+    isValid = false
+  }
+  
+  return isValid
+}
 
 const handleRegister = async () => {
-  if (form.value.password !== form.value.confirmPassword) {
-    toast.error('Passwords do not match')
+  if (!validateForm()) {
+    toast.error('Please check your information!')
     return
   }
   
   loading.value = true
+  clearAllErrors()
   
   try {
-    const { confirmPassword, ...registerData } = form.value
+    const { confirmPassword, agreeTerms, ...registerData } = form.value
     await authStore.register(registerData)
-    toast.success('Registration successful!')
-    router.push('/')
+    
+    successMessage.value = 'Account created successfully! Redirecting...'
+    toast.success('Welcome to ShopApp!')
+    
+    setTimeout(() => {
+      router.push('/')
+    }, 1500)
+    
   } catch (error) {
     console.error('Registration error:', error)
+    
+    if (error.response) {
+      const status = error.response.status
+      const data = error.response.data
+      
+      switch (status) {
+        case 400:
+          errorMessage.value = 'Invalid data provided!'
+          break
+        case 409:
+          errorMessage.value = 'This email is already registered!'
+          errors.email = 'Email already exists'
+          break
+        case 422:
+          if (data.errors) {
+            errors.name = data.errors.name?.[0] || ''
+            errors.email = data.errors.email?.[0] || ''
+            errors.phone = data.errors.phone?.[0] || ''
+            errors.password = data.errors.password?.[0] || ''
+          } else {
+            errorMessage.value = data.message || 'Invalid data!'
+          }
+          break
+        case 429:
+          errorMessage.value = 'Too many registration attempts. Please try again later!'
+          break
+        case 500:
+          errorMessage.value = 'System error. Please try again later!'
+          break
+        default:
+          errorMessage.value = data.message || 'Registration failed!'
+      }
+    } else if (error.request) {
+      errorMessage.value = 'Unable to connect to server. Please check your network!'
+    } else {
+      errorMessage.value = 'An unexpected error occurred!'
+    }
+    
+    toast.error('Registration failed!')
   } finally {
     loading.value = false
   }
@@ -129,26 +377,424 @@ const handleRegister = async () => {
 </script>
 
 <style scoped lang="scss">
-.register-card {
-  margin-top: 30px;
+@import '@/assets/styles/variables';
+
+.auth-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
   
-  .card-title {
-    font-size: 2rem;
-    font-weight: 500;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  }
+}
+
+.auth-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 1100px;
+  width: 100%;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  
+  @media (max-width: $tablet) {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+  }
+}
+
+.auth-card {
+  padding: 50px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-height: 90vh;
+  overflow-y: auto;
+  
+  @media (max-width: $tablet) {
+    padding: 40px 30px;
+  }
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 30px;
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 25px;
+    
+    .material-icons {
+      font-size: 32px;
+      color: $primary-color;
+    }
+    
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+  
+  h2 {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #333;
+  }
+  
+  p {
+    margin: 0;
+    color: #666;
+    font-size: 16px;
+  }
+}
+
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffebee;
+  color: #c62828;
+  padding: 15px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border-left: 4px solid #c62828;
+  
+  .material-icons {
+    font-size: 20px;
+  }
+}
+
+.success-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #e8f5e8;
+  color: #2e7d32;
+  padding: 15px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border-left: 4px solid #4caf50;
+  
+  .material-icons {
+    font-size: 20px;
+  }
+}
+
+.auth-form {
+  margin-bottom: 25px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  
+  &:focus-within {
+    border-color: $primary-color;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+  }
+  
+  .material-icons {
+    color: #6c757d;
+    margin: 0 15px;
+    font-size: 20px;
+  }
+  
+  input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 16px 0;
+    font-size: 16px;
+    color: #333;
+    outline: none;
+    
+    &::placeholder {
+      color: #6c757d;
+    }
+    
+    &.error {
+      color: #c62828;
+    }
+  }
+  
+  .password-toggle {
+    background: none;
+    border: none;
+    padding: 0 15px;
+    cursor: pointer;
+    color: #6c757d;
+    
+    &:hover {
+      color: $primary-color;
+    }
+  }
+}
+
+.error-text {
+  color: #c62828;
+  font-size: 13px;
+  margin-top: 6px;
+  margin-left: 4px;
+}
+
+.help-text {
+  color: #6c757d;
+  font-size: 13px;
+  margin-top: 6px;
+  margin-left: 4px;
+}
+
+.terms-wrapper {
+  margin-bottom: 25px;
+}
+
+.terms-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  line-height: 1.5;
+  
+  input[type="checkbox"] {
+    display: none;
+  }
+  
+  .checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    margin-top: 2px;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 2px;
+      width: 4px;
+      height: 8px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+  }
+  
+  input:checked + .checkmark {
+    background: $primary-color;
+    border-color: $primary-color;
+    
+    &::after {
+      opacity: 1;
+    }
+  }
+  
+  .terms-text {
+    font-size: 14px;
+    color: #666;
+    
+    a {
+      color: $primary-color;
+      text-decoration: none;
+      font-weight: 500;
+      
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.auth-btn {
+  width: 100%;
+  background: linear-gradient(135deg, $primary-color, darken($primary-color, 10%));
+  color: white;
+  border: none;
+  padding: 18px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(25, 118, 210, 0.3);
+  }
+  
+  &:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+  }
+  
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s ease-in-out infinite;
+  }
+}
+
+.auth-footer {
+  text-align: center;
+  
+  p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+    
+    a {
+      color: $primary-color;
+      text-decoration: none;
+      font-weight: 600;
+      
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.side-panel {
+  background: linear-gradient(135deg, $primary-color, darken($primary-color, 15%));
+  color: white;
+  padding: 50px 35px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  }
+  
+  @media (max-width: $tablet) {
+    display: none;
+  }
+}
+
+.side-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.side-illustration {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 35px;
+  
+  .material-icons {
+    font-size: 40px;
+    opacity: 0.9;
+    animation: float 3s ease-in-out infinite;
+    
+    &:nth-child(2) {
+      animation-delay: -1s;
+    }
+    
+    &:nth-child(3) {
+      animation-delay: -2s;
+    }
+  }
+}
+
+.side-content {
+  h3 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  
+  p {
+    font-size: 15px;
+    line-height: 1.6;
+    opacity: 0.9;
     margin-bottom: 30px;
   }
+}
+
+.benefits {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   
-  .full-width {
-    width: 100%;
+  .material-icons {
+    font-size: 18px;
+    color: #4caf50;
   }
   
-  .card-action {
-    background-color: transparent;
-    border-top: none;
-    
-    p {
-      margin: 0;
-    }
+  span {
+    font-size: 13px;
+    opacity: 0.9;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
   }
 }
 </style>

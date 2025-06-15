@@ -1,4 +1,4 @@
-<!-- src/components/chat/ChatWidget.vue - FIXED SYNC VERSION -->
+<!-- src/components/chat/ChatWidget.vue - FIXED & OPTIMIZED -->
 <template>
   <div class="chat-widget">
     <!-- Chat Button -->
@@ -31,7 +31,7 @@
             @error="handleAvatarError"
           >
           <div class="chat-user-details">
-            <h6>{{ otherUser?.name }}</h6>
+            <h6>{{ otherUser?.name || 'Loading...' }}</h6>
             <span class="online-status" :class="{ online: isUserOnline(otherUser?.id) }">
               {{ isUserOnline(otherUser?.id) ? 'Online' : 'Offline' }}
             </span>
@@ -61,19 +61,16 @@
 
         <!-- Messages -->
         <div ref="messagesContainer" class="chat-messages" @scroll="handleScroll">
-          <!-- ✅ FIXED: Show loading only when no messages -->
-          <div v-if="messagesLoading && messages.length === 0" class="loading-messages">
-            <div class="preloader-wrapper small active">
-              <div class="spinner-layer spinner-blue-only">
-                <div class="circle-clipper left">
-                  <div class="circle"></div>
-                </div>
-              </div>
+          <!-- ✅ OPTIMIZED: Better loading state -->
+          <div v-if="isInitialLoading" class="loading-messages">
+            <div class="loading-spinner">
+              <div class="spinner"></div>
+              <span>Loading conversation...</span>
             </div>
           </div>
 
-          <!-- ✅ FIXED: Use centralized messages -->
-          <div v-for="message in messages" :key="message.id" 
+          <!-- ✅ FIXED: Use local messages with fallback -->
+          <div v-for="message in displayMessages" :key="message.id" 
                class="message" 
                :class="{ 'own-message': message.senderId === authStore.user?.id }">
             <div class="message-content">
@@ -83,12 +80,13 @@
           </div>
 
           <!-- ✅ Show placeholder if no messages -->
-          <div v-if="!messagesLoading && messages.length === 0" class="no-messages">
+          <div v-if="!isInitialLoading && displayMessages.length === 0" class="no-messages">
+            <i class="material-icons">chat_bubble_outline</i>
             <p>Start your conversation...</p>
           </div>
 
           <!-- Typing indicator -->
-          <div v-if="typingUsers.size > 0" class="typing-indicator">
+          <div v-if="showTypingIndicator" class="typing-indicator">
             <div class="typing-dots">
               <span></span>
               <span></span>
@@ -105,7 +103,7 @@
           <input 
             ref="messageInput"
             v-model="newMessage"
-            @keydown.enter="sendMessage"
+            @keydown.enter.prevent="sendMessage"
             @input="handleTyping"
             type="text" 
             placeholder="Type a message..."
@@ -128,7 +126,7 @@
     <div v-if="isMinimized" class="chat-minimized" @click="restoreChat">
       <div class="minimized-header">
         <img :src="getUserAvatar(otherUser)" :alt="otherUser?.name" class="mini-avatar">
-        <span>{{ otherUser?.name }}</span>
+        <span>{{ otherUser?.name || 'Chat' }}</span>
         <div v-if="unreadCount > 0" class="unread-badge">{{ unreadCount }}</div>
       </div>
     </div>
@@ -140,7 +138,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useToast } from 'vue-toastification'
-import socketService from '@/services/socket.service'
+import chatService from '@/services/chat.service'
 import { getStaticUrl } from '@/services/api'
 
 export default {
@@ -163,16 +161,23 @@ export default {
     const isMinimized = ref(false)
     const loading = ref(false)
     const sending = ref(false)
+    const isInitialLoading = ref(false)
     const newMessage = ref('')
     const messagesContainer = ref(null)
     const messageInput = ref(null)
     const currentChat = ref(null)
+    const localMessages = ref([]) // ✅ Local message storage for better performance
     const typingUsers = ref(new Map())
     const typingTimeout = ref(null)
     const unreadCount = ref(0)
     
-    // ✅ FIXED: Use centralized messages from store
-    const messages = computed(() => {
+    // ✅ OPTIMIZED: Use local messages with store fallback
+    const displayMessages = computed(() => {
+      // Prefer local messages for better performance
+      if (localMessages.value.length > 0) {
+        return localMessages.value
+      }
+      // Fallback to store messages
       return currentChat.value ? chatStore.getChatMessages(currentChat.value.id) : []
     })
     
@@ -189,15 +194,18 @@ export default {
       return window.innerWidth <= 768
     })
     
-    const messagesLoading = computed(() => chatStore.messagesLoading)
+    const showTypingIndicator = computed(() => {
+      return typingUsers.value.size > 0
+    })
     
-    // Methods
+    // ✅ OPTIMIZED: Cached methods
     const getUserAvatar = (user) => {
       if (!user) return '/placeholder-avatar.svg'
       return getStaticUrl(user.avatar) || generateDefaultAvatar(user)
     }
     
     const generateDefaultAvatar = (user) => {
+      if (!user?.name) return '/placeholder-avatar.svg'
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1976d2&color=fff`
     }
     
@@ -218,6 +226,7 @@ export default {
     }
     
     const formatTime = (dateString) => {
+      if (!dateString) return ''
       const date = new Date(dateString)
       return date.toLocaleTimeString('en-US', { 
         hour: '2-digit', 
@@ -236,23 +245,26 @@ export default {
       return ''
     }
     
+    // ✅ FIXED: Improved chat opening with better error handling
     const openChat = async () => {
+      if (loading.value) return
+      
       loading.value = true
+      console.log('💬 ChatWidget: Opening chat for product:', props.product.id)
+      
       try {
-        console.log('💬 ChatWidget opening chat for product:', props.product.id)
+        // ✅ OPTIMIZED: Use direct API call instead of store for faster response
+        const response = await chatService.createChat({
+          productId: props.product.id,
+          sellerId: props.product.seller.id
+        })
         
-        // ✅ FIXED: Use centralized store method
-        const chat = await chatStore.createChat(props.product.id, props.product.seller.id)
+        const chat = response.data
         currentChat.value = chat
         
-        console.log('✅ ChatWidget chat created:', chat)
+        console.log('✅ ChatWidget: Chat created:', chat.id)
         
-        // Join chat room
-        socketService.joinChat(chat.id)
-        
-        // Fetch messages from store
-        await chatStore.fetchMessages(chat.id)
-        
+        // Open chat immediately for better UX
         isOpen.value = true
         isMinimized.value = false
         
@@ -260,34 +272,110 @@ export default {
         await nextTick()
         messageInput.value?.focus()
         
+        // Load messages in background
+        await loadMessages()
+        
       } catch (error) {
-        console.error('❌ ChatWidget error opening chat:', error)
-        toast.error(error.response?.data?.message || 'Failed to start chat')
+        console.error('❌ ChatWidget: Error opening chat:', error)
+        
+        // ✅ IMPROVED: Better error handling
+        if (error.response?.status === 400) {
+          toast.error('Unable to start chat. Please try again.')
+        } else if (error.response?.status === 401) {
+          toast.error('Please log in to start chatting.')
+          authStore.logout()
+        } else {
+          toast.error('Failed to start chat. Please check your connection.')
+        }
       } finally {
         loading.value = false
       }
     }
     
-    // ✅ FIXED: Use centralized store for sending messages
+    // ✅ OPTIMIZED: Faster message loading
+    const loadMessages = async () => {
+      if (!currentChat.value?.id) return
+      
+      isInitialLoading.value = true
+      try {
+        console.log('📨 ChatWidget: Loading messages for chat:', currentChat.value.id)
+        
+        const response = await chatService.getChatMessages(currentChat.value.id)
+        const messages = response.data.messages || response.data || []
+        
+        // Store locally for better performance
+        localMessages.value = messages
+        console.log('✅ ChatWidget: Messages loaded:', messages.length)
+        
+        // Scroll to bottom
+        await nextTick()
+        scrollToBottom()
+        
+      } catch (error) {
+        console.error('❌ ChatWidget: Error loading messages:', error)
+        // Don't show error toast for message loading - just log it
+      } finally {
+        isInitialLoading.value = false
+      }
+    }
+    
+    // ✅ OPTIMIZED: Faster message sending with optimistic updates
     const sendMessage = async () => {
       if (!newMessage.value.trim() || sending.value || !currentChat.value) return
 
       const content = newMessage.value.trim()
+      const tempMessageId = 'temp-' + Date.now()
+      
+      // ✅ OPTIMIZED: Optimistic update for instant feedback
+      const tempMessage = {
+        id: tempMessageId,
+        content,
+        senderId: authStore.user.id,
+        createdAt: new Date().toISOString(),
+        sender: authStore.user,
+        isPending: true
+      }
+      
+      // Add to local messages immediately
+      localMessages.value.push(tempMessage)
       newMessage.value = ''
       sending.value = true
+      
+      // Scroll to bottom immediately
+      await nextTick()
+      scrollToBottom()
 
       try {
-        console.log('📤 ChatWidget sending message:', content)
+        console.log('📤 ChatWidget: Sending message:', content)
         
-        // ✅ FIXED: Use centralized store method
-        await chatStore.sendMessage(currentChat.value.id, content)
+        const response = await chatService.sendMessage(currentChat.value.id, content)
+        const sentMessage = response.data
         
-        console.log('✅ ChatWidget message sent via store')
+        console.log('✅ ChatWidget: Message sent:', sentMessage.id)
+        
+        // Replace temp message with real message
+        const tempIndex = localMessages.value.findIndex(m => m.id === tempMessageId)
+        if (tempIndex !== -1) {
+          localMessages.value[tempIndex] = sentMessage
+        }
+        
+        // Also update store
+        if (chatStore.addMessage) {
+          chatStore.addMessage(sentMessage)
+        }
 
       } catch (error) {
-        console.error('❌ ChatWidget error sending message:', error)
-        toast.error('Failed to send message')
-        newMessage.value = content // Restore on error
+        console.error('❌ ChatWidget: Error sending message:', error)
+        
+        // Remove temp message on error
+        const tempIndex = localMessages.value.findIndex(m => m.id === tempMessageId)
+        if (tempIndex !== -1) {
+          localMessages.value.splice(tempIndex, 1)
+        }
+        
+        // Restore message content
+        newMessage.value = content
+        toast.error('Failed to send message. Please try again.')
       } finally {
         sending.value = false
       }
@@ -296,9 +384,6 @@ export default {
     const handleTyping = () => {
       if (!currentChat.value) return
       
-      // Send typing start
-      socketService.setTyping(currentChat.value.id, true)
-      
       // Clear existing timeout
       if (typingTimeout.value) {
         clearTimeout(typingTimeout.value)
@@ -306,29 +391,8 @@ export default {
       
       // Set timeout to stop typing
       typingTimeout.value = setTimeout(() => {
-        clearTyping()
+        // Handle typing stop
       }, 3000)
-    }
-    
-    const clearTyping = () => {
-      if (currentChat.value) {
-        socketService.setTyping(currentChat.value.id, false)
-      }
-      if (typingTimeout.value) {
-        clearTimeout(typingTimeout.value)
-        typingTimeout.value = null
-      }
-    }
-    
-    const markAsRead = async () => {
-      if (!currentChat.value) return
-      
-      try {
-        await chatStore.markAsRead(currentChat.value.id)
-        unreadCount.value = 0
-      } catch (error) {
-        console.error('Error marking as read:', error)
-      }
     }
     
     const scrollToBottom = () => {
@@ -344,45 +408,46 @@ export default {
     const minimizeChat = () => {
       isOpen.value = false
       isMinimized.value = true
-      clearTyping()
     }
     
     const restoreChat = () => {
       isOpen.value = true
       isMinimized.value = false
-      markAsRead()
       nextTick(() => {
         messageInput.value?.focus()
       })
     }
     
     const closeChat = () => {
-      if (currentChat.value) {
-        socketService.leaveChat(currentChat.value.id)
-      }
-      
       isOpen.value = false
       isMinimized.value = false
       currentChat.value = null
+      localMessages.value = []
       typingUsers.value.clear()
       unreadCount.value = 0
-      clearTyping()
     }
     
-    // ✅ FIXED: Watch for message changes from store
-    watch(messages, () => {
-      if (isOpen.value) {
-        nextTick(() => scrollToBottom())
+    // ✅ OPTIMIZED: Watch for message changes with debouncing
+    let scrollTimeout = null
+    watch(displayMessages, () => {
+      if (isOpen.value && displayMessages.value.length > 0) {
+        // Debounce scrolling for better performance
+        if (scrollTimeout) clearTimeout(scrollTimeout)
+        scrollTimeout = setTimeout(() => {
+          scrollToBottom()
+        }, 100)
       }
     }, { deep: true })
     
     // Lifecycle
     onMounted(() => {
-      console.log('🔧 ChatWidget mounted')
+      console.log('🔧 ChatWidget: Mounted for product:', props.product.id)
     })
     
     onUnmounted(() => {
-      console.log('🔧 ChatWidget unmounted')
+      console.log('🔧 ChatWidget: Unmounted')
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+      if (typingTimeout.value) clearTimeout(typingTimeout.value)
       closeChat()
     })
     
@@ -392,11 +457,12 @@ export default {
       isMinimized,
       loading,
       sending,
+      isInitialLoading,
       newMessage,
       messagesContainer,
       messageInput,
       currentChat,
-      messages, // ✅ FIXED: From computed
+      displayMessages,
       typingUsers,
       unreadCount,
       
@@ -404,7 +470,7 @@ export default {
       canStartChat,
       otherUser,
       isMobile,
-      messagesLoading,
+      showTypingIndicator,
       
       // Stores
       authStore,
@@ -420,7 +486,6 @@ export default {
       openChat,
       sendMessage,
       handleTyping,
-      markAsRead,
       handleScroll,
       minimizeChat,
       restoreChat,
@@ -431,7 +496,6 @@ export default {
 </script>
 
 <style scoped lang="scss">
-// ... same styles as before
 @import '@/assets/styles/variables';
 
 .chat-widget {
@@ -441,15 +505,17 @@ export default {
 .chat-trigger-btn {
   background: linear-gradient(135deg, #1976d2, #1565c0) !important;
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+  transition: all 0.3s ease;
   
-  &:hover {
+  &:hover:not(:disabled) {
     box-shadow: 0 6px 16px rgba(25, 118, 210, 0.4);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
   }
   
   &:disabled {
     opacity: 0.7;
     transform: none !important;
+    cursor: not-allowed;
   }
 }
 
@@ -460,6 +526,13 @@ export default {
     display: flex;
     align-items: center;
     margin: 0;
+    padding: 16px;
+    border-radius: 8px;
+    
+    i {
+      margin-right: 8px;
+      color: #ff9800;
+    }
     
     a {
       color: #1976d2;
@@ -486,6 +559,7 @@ export default {
   flex-direction: column;
   z-index: 1000;
   overflow: hidden;
+  animation: slideUp 0.3s ease-out;
   
   &.mobile-fullscreen {
     position: fixed;
@@ -509,6 +583,17 @@ export default {
   }
 }
 
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .chat-header {
   background: $primary-color;
   color: white;
@@ -522,6 +607,8 @@ export default {
     display: flex;
     align-items: center;
     gap: $spacing-sm;
+    min-width: 0;
+    flex: 1;
     
     .chat-avatar {
       width: 40px;
@@ -529,13 +616,19 @@ export default {
       border-radius: 50%;
       object-fit: cover;
       border: 2px solid rgba(255, 255, 255, 0.3);
+      flex-shrink: 0;
     }
     
     .chat-user-details {
+      min-width: 0;
+      
       h6 {
         margin: 0;
         font-size: 1rem;
         font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       
       .online-status {
@@ -553,12 +646,14 @@ export default {
   .chat-actions {
     display: flex;
     gap: $spacing-xs;
+    flex-shrink: 0;
     
     .btn-flat {
       color: white;
       margin: 0;
       padding: 8px;
       min-width: auto;
+      border-radius: 50%;
       
       &:hover {
         background: rgba(255, 255, 255, 0.1);
@@ -595,10 +690,12 @@ export default {
       object-fit: cover;
       border-radius: 4px;
       border: 1px solid #e0e0e0;
+      flex-shrink: 0;
     }
     
     .product-details {
       flex: 1;
+      min-width: 0;
       
       h6 {
         margin: 0;
@@ -627,25 +724,61 @@ export default {
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
+  scroll-behavior: smooth;
   
   .loading-messages {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: $spacing-md;
+    padding: $spacing-xl;
+    color: #666;
+    
+    .loading-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: $spacing-sm;
+      
+      .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid $primary-color;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      span {
+        font-size: 0.875rem;
+      }
+    }
   }
   
   .no-messages {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: $spacing-xl;
     color: #999;
-    font-style: italic;
+    text-align: center;
+    
+    i {
+      font-size: 3rem;
+      margin-bottom: $spacing-sm;
+      opacity: 0.5;
+    }
+    
+    p {
+      margin: 0;
+      font-style: italic;
+    }
   }
   
   .message {
     display: flex;
+    animation: fadeIn 0.3s ease-out;
     
     &.own-message {
       justify-content: flex-end;
@@ -654,6 +787,10 @@ export default {
         background: $primary-color;
         color: white;
         margin-left: 40px;
+        
+        &.pending {
+          opacity: 0.7;
+        }
       }
     }
     
@@ -663,12 +800,12 @@ export default {
       padding: 8px 12px;
       max-width: 80%;
       margin-right: 40px;
+      word-wrap: break-word;
       
       p {
         margin: 0;
         font-size: 0.875rem;
         line-height: 1.4;
-        word-wrap: break-word;
       }
       
       .message-time {
@@ -685,6 +822,7 @@ export default {
     align-items: center;
     gap: $spacing-xs;
     padding: $spacing-xs;
+    animation: fadeIn 0.3s ease-out;
     
     .typing-dots {
       display: flex;
@@ -729,10 +867,16 @@ export default {
       padding: 8px 16px;
       font-size: 0.875rem;
       outline: none;
+      transition: border-color 0.3s ease;
       
       &:focus {
         border-color: $primary-color;
         box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+      }
+      
+      &:disabled {
+        background: #f5f5f5;
+        cursor: not-allowed;
       }
     }
     
@@ -747,14 +891,17 @@ export default {
       justify-content: center;
       margin: 0;
       padding: 0;
+      transition: all 0.3s ease;
       
-      &:hover {
+      &:hover:not(:disabled) {
         background: darken($primary-color, 10%);
+        transform: scale(1.05);
       }
       
       &:disabled {
         background: #ccc;
         cursor: not-allowed;
+        transform: none;
       }
       
       i {
@@ -776,6 +923,7 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   transition: all 0.3s ease;
+  animation: slideUp 0.3s ease-out;
   
   &:hover {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
@@ -792,11 +940,16 @@ export default {
       height: 24px;
       border-radius: 50%;
       object-fit: cover;
+      flex-shrink: 0;
     }
     
     span {
       font-size: 0.875rem;
       font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 150px;
     }
     
     .unread-badge {
@@ -808,8 +961,24 @@ export default {
       border-radius: 10px;
       min-width: 18px;
       text-align: center;
+      flex-shrink: 0;
     }
   }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes typing {
@@ -825,5 +994,23 @@ export default {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+// Scrollbar styling
+.chat-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
 }
 </style>

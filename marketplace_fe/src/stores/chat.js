@@ -1,6 +1,6 @@
-// src/stores/chat.js - UPDATED VERSION
+// src/stores/chat.js - REAL-TIME VERSION
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import chatService from '@/services/chat.service'
 import socketService from '@/services/socket.service'
 import { useToast } from 'vue-toastification'
@@ -11,15 +11,17 @@ export const useChatStore = defineStore('chat', () => {
   // State
   const chats = ref([])
   const currentChat = ref(null)
-  const messages = ref(new Map()) // ✅ FIX: Messages stored by chatId
+  const messages = ref(new Map()) // chatId -> messages[]
   const loading = ref(false)
   const messagesLoading = ref(false)
   const onlineUsers = ref(new Set())
-  const typingUsers = ref(new Map()) // chatId -> Map of userId -> userName
-  
+  const typingUsers = ref(new Map()) // chatId -> Map(userId -> userName)
+  const unreadCounts = ref(new Map()) // chatId -> count
+  const isSocketReady = ref(false)
+
   // Computed
   const totalUnreadCount = computed(() => {
-    return chats.value.reduce((total, chat) => total + (chat.unreadCount || 0), 0)
+    return Array.from(unreadCounts.value.values()).reduce((total, count) => total + count, 0)
   })
 
   const currentChatMessages = computed(() => {
@@ -40,17 +42,201 @@ export const useChatStore = defineStore('chat', () => {
     return messages.value.get(chatId) || []
   }
 
+  // ✅ FIX: Setup socket listeners properly
+  const setupSocketListeners = () => {
+    console.log('🔌 Setting up chat socket listeners...')
+    
+    // ✅ NEW MESSAGE EVENT
+    socketService.onNewMessage((message) => {
+      console.log('🔔 Real-time: New message received:', message.id)
+      handleNewMessage(message)
+    })
+
+    // ✅ NEW CHAT NOTIFICATION
+    socketService.onNewChatNotification((data) => {
+      console.log('🔔 Real-time: New chat notification')
+      handleNewChatNotification(data)
+    })
+
+    // ✅ MESSAGES READ EVENT
+    socketService.onMessagesRead((data) => {
+      console.log('✅ Real-time: Messages marked as read')
+      handleMessagesRead(data)
+    })
+
+    // ✅ USER TYPING EVENT
+    socketService.onUserTyping((data) => {
+      console.log('✏️ Real-time: User typing status changed')
+      handleUserTyping(data)
+    })
+
+    // ✅ USER ONLINE/OFFLINE EVENTS
+    socketService.onUserOnline((data) => {
+      console.log('🟢 Real-time: User came online')
+      updateOnlineStatus(data.userId, true)
+    })
+
+    socketService.onUserOffline((data) => {
+      console.log('🔴 Real-time: User went offline')
+      updateOnlineStatus(data.userId, false)
+    })
+
+    isSocketReady.value = true
+    console.log('✅ Chat socket listeners ready')
+  }
+
+  // ✅ FIX: Better new message handling
+  const handleNewMessage = (message) => {
+    const chatId = message.chatId || message.conversationId
+    if (!chatId) {
+      console.warn('⚠️ Message missing chatId:', message)
+      return
+    }
+
+    console.log('📨 Processing new message for chat:', chatId)
+
+    // Add to messages map
+    addMessageToChat(chatId, message)
+
+    // Update chat list
+    updateChatLastMessage(chatId, message)
+
+    // Handle unread count
+    if (currentChat.value?.id !== chatId) {
+      incrementUnreadCount(chatId)
+      
+      // Show notification
+      if (message.sender?.name) {
+        toast.info(`💬 ${message.sender.name}: ${message.content.substring(0, 50)}${message.content.length > 50 ? '...' : ''}`, {
+          timeout: 4000,
+          icon: false
+        })
+      }
+    } else {
+      // Auto-mark as read if in current chat
+      socketService.markRead(chatId)
+    }
+  }
+
+  // ✅ NEW: Handle new chat notification
+  const handleNewChatNotification = (data) => {
+    if (data.productName) {
+      toast.info(`💬 New message about ${data.productName}`)
+    }
+    
+    // Refresh chat list to get new chat
+    fetchChats()
+  }
+
+  // ✅ FIX: Handle messages read
+  const handleMessagesRead = (data) => {
+    const { chatId, userId } = data
+    
+    // Mark messages as read in local storage
+    const chatMessages = messages.value.get(chatId) || []
+    let updated = false
+    
+    chatMessages.forEach(msg => {
+      if (msg.senderId === userId && !msg.isRead) {
+        msg.isRead = true
+        updated = true
+      }
+    })
+    
+    if (updated) {
+      messages.value.set(chatId, [...chatMessages])
+    }
+  }
+
+  // ✅ FIX: Handle user typing
+  const handleUserTyping = (data) => {
+    const { chatId, userId, userName, isTyping } = data
+    
+    if (!typingUsers.value.has(chatId)) {
+      typingUsers.value.set(chatId, new Map())
+    }
+    
+    const chatTypingUsers = typingUsers.value.get(chatId)
+    
+    if (isTyping) {
+      chatTypingUsers.set(userId, userName)
+    } else {
+      chatTypingUsers.delete(userId)
+    }
+    
+    // Trigger reactivity
+    typingUsers.value.set(chatId, new Map(chatTypingUsers))
+  }
+
+  // ✅ FIX: Add message to chat with deduplication
+  const addMessageToChat = (chatId, message) => {
+    const chatMessages = messages.value.get(chatId) || []
+    
+    // Check if message already exists
+    const existingIndex = chatMessages.findIndex(m => m.id === message.id)
+    if (existingIndex === -1) {
+      // Add new message
+      chatMessages.push(message)
+      messages.value.set(chatId, [...chatMessages])
+      console.log('✅ Message added to chat:', chatId, 'Total:', chatMessages.length)
+    } else {
+      // Update existing message
+      chatMessages[existingIndex] = message
+      messages.value.set(chatId, [...chatMessages])
+      console.log('📝 Message updated in chat:', chatId)
+    }
+  }
+
+  // ✅ FIX: Update chat's last message and move to top
+  const updateChatLastMessage = (chatId, message) => {
+    const chatIndex = chats.value.findIndex(c => c.id === chatId)
+    if (chatIndex !== -1) {
+      const chat = { ...chats.value[chatIndex] }
+      chat.lastMessage = message
+      chat.lastMessageAt = message.createdAt
+      
+      // Remove from current position and add to top
+      chats.value.splice(chatIndex, 1)
+      chats.value.unshift(chat)
+      
+      console.log('📋 Chat moved to top:', chatId)
+    }
+  }
+
+  // ✅ FIX: Increment unread count
+  const incrementUnreadCount = (chatId) => {
+    const currentCount = unreadCounts.value.get(chatId) || 0
+    unreadCounts.value.set(chatId, currentCount + 1)
+    
+    // Also update in chat list
+    const chatIndex = chats.value.findIndex(c => c.id === chatId)
+    if (chatIndex !== -1) {
+      chats.value[chatIndex].unreadCount = currentCount + 1
+    }
+    
+    console.log('🔔 Unread count updated for chat:', chatId, 'Count:', currentCount + 1)
+  }
+
   // Actions
-  async function fetchChats(page = 1, limit = 20) {
+  const fetchChats = async (page = 1, limit = 20) => {
     loading.value = true
     try {
       console.log('📋 Fetching chats, page:', page)
       
       const response = await chatService.getUserChats(page, limit)
+      const chatData = response.data.chats || response.data || []
+      
       if (page === 1) {
-        chats.value = response.data.chats || response.data
+        chats.value = chatData
+        
+        // Initialize unread counts
+        chatData.forEach(chat => {
+          if (chat.unreadCount > 0) {
+            unreadCounts.value.set(chat.id, chat.unreadCount)
+          }
+        })
       } else {
-        chats.value.push(...(response.data.chats || response.data))
+        chats.value.push(...chatData)
       }
       
       console.log('✅ Chats loaded:', chats.value.length)
@@ -64,17 +250,14 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function createChat(productId, sellerId) {
+  const createChat = async (productId, sellerId) => {
     try {
       console.log('💬 Creating chat for product:', productId, 'seller:', sellerId)
       
-      const response = await chatService.createChat({
-        productId,
-        sellerId
-      })
+      const response = await chatService.createChat({ productId, sellerId })
       const chat = response.data
       
-      console.log('✅ Chat created/found:', chat)
+      console.log('✅ Chat created/found:', chat.id)
       
       // Add to chats list if not exists
       const existingIndex = chats.value.findIndex(c => c.id === chat.id)
@@ -92,7 +275,7 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function fetchChatById(chatId) {
+  const fetchChatById = async (chatId) => {
     try {
       console.log('🔍 Fetching chat by ID:', chatId)
       
@@ -115,8 +298,8 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // ✅ UPDATED: Better message fetching with centralized storage
-  async function fetchMessages(chatId, page = 1, limit = 50) {
+  // ✅ FIX: Better message fetching
+  const fetchMessages = async (chatId, page = 1, limit = 50) => {
     messagesLoading.value = true
     try {
       console.log('📨 Fetching messages for chat:', chatId, 'page:', page)
@@ -145,25 +328,20 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // ✅ NEW: Centralized send message method
-  async function sendMessage(chatId, content) {
+  // ✅ FIX: Optimized send message
+  const sendMessage = async (chatId, content) => {
     try {
-      console.log('📤 Sending message to chat:', chatId, 'content:', content)
+      console.log('📤 Sending message to chat:', chatId)
       
       const response = await chatService.sendMessage(chatId, content)
       const newMessage = response.data
       
-      console.log('✅ Message sent:', newMessage)
+      console.log('✅ Message sent via API:', newMessage.id)
       
-      // Add message to centralized storage
-      const chatMessages = messages.value.get(chatId) || []
-      const exists = chatMessages.some(m => m.id === newMessage.id)
-      if (!exists) {
-        chatMessages.push(newMessage)
-        messages.value.set(chatId, chatMessages)
-      }
+      // Add to local storage immediately for better UX
+      addMessageToChat(chatId, newMessage)
       
-      // Update chat's last message in list
+      // Update chat list
       updateChatLastMessage(chatId, newMessage)
       
       return newMessage
@@ -173,79 +351,63 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // ✅ UPDATED: Better message handling
-  function addMessage(message) {
-    console.log('📨 Adding message:', message.id, 'to chat:', message.chatId)
-    
-    const chatId = message.chatId || message.conversationId
-    if (!chatId) {
-      console.warn('⚠️ Message missing chatId:', message)
-      return
-    }
-    
-    // Add message to centralized storage
-    const chatMessages = messages.value.get(chatId) || []
-    const existingIndex = chatMessages.findIndex(m => m.id === message.id)
-    if (existingIndex === -1) {
-      chatMessages.push(message)
-      messages.value.set(chatId, chatMessages)
-      console.log('✅ Message added to chat:', chatId)
-    } else {
-      console.log('📝 Message already exists:', message.id)
-    }
-
-    // Update chat's last message and move to top
-    updateChatLastMessage(chatId, message)
-  }
-
-  // ✅ NEW: Helper to update chat's last message
-  function updateChatLastMessage(chatId, message) {
-    const chatIndex = chats.value.findIndex(c => c.id === chatId)
-    if (chatIndex !== -1) {
-      chats.value[chatIndex].lastMessage = message
-      chats.value[chatIndex].lastMessageAt = message.createdAt
-      
-      // Move chat to top
-      const chat = chats.value.splice(chatIndex, 1)[0]
-      chats.value.unshift(chat)
-    }
-  }
-
-  // ✅ NEW: Mark messages as read
-  async function markAsRead(chatId) {
+  // ✅ FIX: Mark as read with local update
+  const markAsRead = async (chatId) => {
     try {
       console.log('✅ Marking messages as read for chat:', chatId)
       
+      // Update local state immediately
+      unreadCounts.value.delete(chatId)
+      
+      const chatIndex = chats.value.findIndex(c => c.id === chatId)
+      if (chatIndex !== -1) {
+        chats.value[chatIndex].unreadCount = 0
+      }
+      
+      // Send to server
       await chatService.markMessagesAsRead(chatId)
       
-      // Update local state
-      markChatAsRead(chatId)
+      // Emit socket event
+      socketService.markRead(chatId)
       
     } catch (error) {
       console.error('❌ Error marking as read:', error)
     }
   }
 
-  function markChatAsRead(chatId, userId = null) {
-    console.log('✅ Marking chat as read:', chatId)
+  const selectChat = (chat) => {
+    console.log('🎯 Selecting chat:', chat?.id)
     
-    // Update messages as read in centralized storage
-    const chatMessages = messages.value.get(chatId) || []
-    chatMessages.forEach(msg => {
-      if (!userId || msg.senderId !== userId) {
-        msg.isRead = true
-      }
-    })
-    messages.value.set(chatId, chatMessages)
-
-    // Reset unread count for chat
-    const chatIndex = chats.value.findIndex(c => c.id === chatId)
-    if (chatIndex !== -1) {
-      chats.value[chatIndex].unreadCount = 0
+    // Leave previous chat room
+    if (currentChat.value?.id) {
+      socketService.leaveChat(currentChat.value.id)
+    }
+    
+    currentChat.value = chat
+    
+    if (chat) {
+      // Join new chat room
+      socketService.joinChat(chat.id)
+      
+      // Clear typing for this chat
+      clearTypingUsers(chat.id)
+      
+      // Mark as read
+      markAsRead(chat.id)
     }
   }
 
-  function updateOnlineStatus(userId, isOnline) {
+  const clearCurrentChat = () => {
+    console.log('🔄 Clearing current chat')
+    
+    if (currentChat.value?.id) {
+      socketService.leaveChat(currentChat.value.id)
+    }
+    
+    currentChat.value = null
+  }
+
+  const updateOnlineStatus = (userId, isOnline) => {
     console.log('👤 User online status:', userId, isOnline)
     
     if (isOnline) {
@@ -273,62 +435,11 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  function setUserTyping(chatId, userId, userName, isTyping) {
-    if (!typingUsers.value.has(chatId)) {
-      typingUsers.value.set(chatId, new Map())
-    }
-    
-    const chatTypingUsers = typingUsers.value.get(chatId)
-    
-    if (isTyping) {
-      chatTypingUsers.set(userId, userName)
-    } else {
-      chatTypingUsers.delete(userId)
-    }
-  }
-
-  function clearTypingUsers(chatId) {
+  const clearTypingUsers = (chatId) => {
     typingUsers.value.delete(chatId)
   }
 
-  function selectChat(chat) {
-    console.log('🎯 Selecting chat:', chat?.id)
-    currentChat.value = chat
-    if (chat) {
-      clearTypingUsers(chat.id)
-    }
-  }
-
-  function clearCurrentChat() {
-    console.log('🔄 Clearing current chat')
-    currentChat.value = null
-  }
-
-  function incrementUnreadCount(chatId) {
-    const chatIndex = chats.value.findIndex(c => c.id === chatId)
-    if (chatIndex !== -1) {
-      chats.value[chatIndex].unreadCount = (chats.value[chatIndex].unreadCount || 0) + 1
-    }
-  }
-
-  // ✅ NEW: Handle new message from socket
-  function handleNewMessage(message) {
-    console.log('🔔 Handling new message from socket:', message.id)
-    
-    addMessage(message)
-    
-    // Show notification if not in current chat
-    if (currentChat.value?.id !== message.chatId) {
-      incrementUnreadCount(message.chatId)
-      
-      if (message.sender?.name) {
-        toast.info(`New message from ${message.sender.name}`)
-      }
-    }
-  }
-
-  // ✅ NEW: Archive chat
-  async function archiveChat(chatId) {
+  const archiveChat = async (chatId) => {
     try {
       console.log('🗂️ Archiving chat:', chatId)
       
@@ -337,6 +448,7 @@ export const useChatStore = defineStore('chat', () => {
       // Remove from local state
       chats.value = chats.value.filter(c => c.id !== chatId)
       messages.value.delete(chatId)
+      unreadCounts.value.delete(chatId)
       
       if (currentChat.value?.id === chatId) {
         currentChat.value = null
@@ -349,47 +461,26 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // ✅ UPDATED: Setup socket listeners
-  function setupSocketListeners() {
-    console.log('🔌 Setting up socket listeners')
-    
-    // New message received
-    socketService.onNewMessage((message) => {
-      console.log('🔔 Socket: New message received')
-      handleNewMessage(message)
-    })
-
-    // New chat notification
-    socketService.onNewChatNotification((data) => {
-      console.log('🔔 Socket: New chat notification')
-      if (currentChat.value?.id !== data.chatId) {
-        toast.info(`New message about ${data.productName}`)
-      }
-    })
-
-    // Messages marked as read
-    socketService.onMessagesRead((data) => {
-      console.log('✅ Socket: Messages marked as read')
-      markChatAsRead(data.chatId, data.userId)
-    })
-
-    // User typing
-    socketService.onUserTyping((data) => {
-      setUserTyping(data.chatId, data.userId, data.userName, data.isTyping)
-    })
-
-    // User online/offline
-    socketService.onUserOnline((data) => {
-      updateOnlineStatus(data.userId, true)
-    })
-
-    socketService.onUserOffline((data) => {
-      updateOnlineStatus(data.userId, false)
-    })
+  // ✅ NEW: Initialize chat store
+  const initialize = () => {
+    console.log('🚀 Initializing chat store...')
+    setupSocketListeners()
   }
 
-  // Initialize socket when store is created
-  setupSocketListeners()
+  // ✅ NEW: Clear all data (useful for logout)
+  const clearData = () => {
+    console.log('🧹 Clearing chat data...')
+    chats.value = []
+    currentChat.value = null
+    messages.value.clear()
+    unreadCounts.value.clear()
+    onlineUsers.value.clear()
+    typingUsers.value.clear()
+    isSocketReady.value = false
+  }
+
+  // ✅ Auto-initialize when store is created
+  initialize()
 
   return {
     // State
@@ -400,6 +491,7 @@ export const useChatStore = defineStore('chat', () => {
     messagesLoading,
     onlineUsers,
     typingUsers,
+    isSocketReady,
     
     // Computed
     totalUnreadCount,
@@ -408,23 +500,24 @@ export const useChatStore = defineStore('chat', () => {
     getChatTypingUsers,
     
     // Methods
-    getChatMessages, // ✅ NEW
+    getChatMessages,
     fetchChats,
     createChat,
     fetchChatById,
     fetchMessages,
-    sendMessage, // ✅ NEW
-    addMessage,
-    handleNewMessage, // ✅ NEW
-    markAsRead, // ✅ NEW
-    markChatAsRead,
-    updateOnlineStatus,
-    setUserTyping,
-    clearTypingUsers,
+    sendMessage,
+    markAsRead,
     selectChat,
     clearCurrentChat,
+    updateOnlineStatus,
+    clearTypingUsers,
+    archiveChat,
+    initialize,
+    clearData,
+    
+    // Internal methods (for components)
+    addMessageToChat,
+    handleNewMessage,
     incrementUnreadCount,
-    archiveChat, // ✅ NEW
-    setupSocketListeners,
   }
 })
