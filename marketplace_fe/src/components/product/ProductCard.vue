@@ -1,4 +1,4 @@
-<!-- src/components/product/ProductCard.vue -->
+<!-- src/components/product/ProductCard.vue - UPDATED WITH TRACKING -->
 <template>
   <div class="card product-card">
     <div class="card-image">
@@ -10,6 +10,7 @@
       <router-link 
         :to="`/products/${product.id}`"
         class="btn-floating halfway-fab waves-effect waves-light blue"
+        @click="handleProductClick"
       >
         <i class="material-icons">visibility</i>
       </router-link>
@@ -54,6 +55,7 @@
       <router-link 
         :to="`/products/${product.id}`"
         class="btn btn-small btn-flat waves-effect"
+        @click="handleProductClick"
       >
         View Details
       </router-link>
@@ -64,6 +66,7 @@
 <script setup>
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
+import { useRecommendationStore } from '@/stores/recommendation' // ✅ NEW
 import { useToast } from 'vue-toastification'
 import { getStaticUrl } from '@/services/api'
 
@@ -74,8 +77,12 @@ const props = defineProps({
   }
 })
 
+// ✅ NEW: Add emit for parent components
+const emit = defineEmits(['product-click'])
+
 const authStore = useAuthStore()
 const cartStore = useCartStore()
+const recommendationStore = useRecommendationStore() // ✅ NEW
 const toast = useToast()
 
 const getImageUrl = () => {
@@ -90,6 +97,17 @@ const handleImageError = (event) => {
 
 const truncateText = (text, length) => {
   return text.length > length ? text.substring(0, length) + '...' : text
+}
+
+// ✅ NEW: Handle product click tracking
+const handleProductClick = async () => {
+  // Track view when user clicks to view product details
+  if (authStore.isAuthenticated) {
+    await recommendationStore.trackProductView(props.product.id)
+  }
+  
+  // Emit to parent component if needed
+  emit('product-click', props.product.id)
 }
 
 const addToCart = async () => {

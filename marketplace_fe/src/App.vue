@@ -1,4 +1,3 @@
-<!-- src/App.vue -->
 <template>
   <div id="app">
     <!-- Conditionally show Navbar -->
@@ -22,24 +21,41 @@
 import { onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification' // ✅ NEW
 import Navbar from '@/components/common/Navbar.vue'
 import Footer from '@/components/common/Footer.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore() // ✅ NEW
 
 // Check if current page is auth page
 const isAuthPage = computed(() => {
   return route.meta.hideNavbar || route.meta.hideFooter
 })
 
-onMounted(() => {
+onMounted(async () => {
   // BỎ M.AutoInit() để tránh conflict với Navbar
   // Manual init trong từng component sẽ stable hơn
    
   // Fetch user profile if token exists
   if (authStore.token) {
-    authStore.fetchProfile()
+    await authStore.fetchProfile()
+    
+    // ✅ NEW: Initialize notification system after auth
+    if (authStore.isAuthenticated) {
+      try {
+        // Connect notification socket with token
+        notificationStore.connectSocket(authStore.token)
+        
+        // Fetch initial notification data
+        await notificationStore.fetchUnreadCount()
+        
+        console.log('✅ Notification system initialized')
+      } catch (error) {
+        console.error('❌ Error initializing notifications:', error)
+      }
+    }
   }
 })
 </script>

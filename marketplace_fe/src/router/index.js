@@ -14,7 +14,7 @@ const routes = [
     path: '/login',
     name: 'login',
     component: () => import('@/views/auth/Login.vue'),
-    meta: { 
+    meta: {
       guest: true,
       hideNavbar: true,
       hideFooter: true
@@ -24,7 +24,7 @@ const routes = [
     path: '/register',
     name: 'register',
     component: () => import('@/views/auth/Register.vue'),
-    meta: { 
+    meta: {
       guest: true,
       hideNavbar: true,
       hideFooter: true
@@ -110,6 +110,12 @@ const routes = [
     component: () => import('@/views/profile/MyReviews.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/notifications',
+    name: 'NotificationList',
+    component: () => import('../views/notifications/NotificationList.vue'),
+    meta: { requiresAuth: true }
+  },
   // Admin routes
   {
     path: '/admin',
@@ -140,6 +146,12 @@ const routes = [
         path: 'categories',
         name: 'admin-categories',
         component: () => import('@/views/admin/CategoryManagement.vue'),
+      },
+      {
+        path: '/admin/notifications',
+        name: 'AdminNotificationManagement',
+        component: () => import('../views/admin/NotificationManagement.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true }
       },
     ],
   }
@@ -191,14 +203,14 @@ router.beforeEach(async (to, from, next) => {
         await authStore.fetchProfile()
       } catch (error) {
         console.error('❌ Failed to fetch profile in router guard:', error)
-        
+
         // Only logout if it's a clear auth error
         if (error.response?.status === 401 || error.response?.status === 403) {
           console.log('🔐 Invalid token, logging out...')
           authStore.logout()
           return next({ name: 'login', query: { redirect: to.fullPath } })
         }
-        
+
         // For other errors (network, etc), don't logout but continue
         console.log('⚠️ Non-auth error, continuing with navigation')
       }
@@ -224,7 +236,7 @@ router.beforeEach(async (to, from, next) => {
         console.log('🔐 Admin route requires auth')
         return next({ name: 'login', query: { redirect: to.fullPath } })
       }
-      
+
       if (!authStore.isAdmin) {
         console.log('👮‍♂️ User not admin, redirecting')
         return next({ name: 'home' })
@@ -236,12 +248,12 @@ router.beforeEach(async (to, from, next) => {
 
   } catch (error) {
     console.error('❌ Router guard error:', error)
-    
+
     // If we're going to login page, let it through
     if (to.name === 'login') {
       return next()
     }
-    
+
     // Otherwise redirect to login
     next({ name: 'login', query: { redirect: to.fullPath } })
   }

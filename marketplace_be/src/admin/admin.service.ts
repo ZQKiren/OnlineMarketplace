@@ -2,10 +2,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminStatsDto } from './dto/admin-stats.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, 
+              private notificationsService: NotificationsService
+  ) {}
 
   async getDashboardStats(): Promise<AdminStatsDto> {
     const [

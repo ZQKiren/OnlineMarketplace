@@ -52,6 +52,23 @@ enum ChatStatus {
   BLOCKED
 }
 
+enum NotificationType {
+  NEW_PRODUCT
+  PRICE_DROP
+  ORDER_UPDATE
+  SYSTEM_UPDATE
+  PROMOTION
+  REVIEW_REMINDER
+  STOCK_ALERT
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
@@ -70,10 +87,14 @@ model User {
   reviews      Review[]
   cart         CartItem[]
   
-  // ✨ NEW: Chat relationships
   buyerChats   Chat[]    @relation("BuyerChats")
   sellerChats  Chat[]    @relation("SellerChats")
   messages     Message[]
+
+  preferences  UserPreference[]
+  productViews ProductView[]
+
+  notificationReads NotificationRead[]
 }
 
 model Category {
@@ -84,6 +105,7 @@ model Category {
   updatedAt    DateTime  @updatedAt
   
   products     Product[]
+  userPreferences UserPreference[]
 }
 
 model Product {
@@ -103,6 +125,7 @@ model Product {
   reviews      Review[]
   cartItems    CartItem[]
   orderItems   OrderItem[]
+  views        ProductView[]
   
   // ✨ NEW: Chat relationship
   chats        Chat[]
@@ -209,4 +232,66 @@ model Message {
   
   chat         Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
   sender       User        @relation(fields: [senderId], references: [id])
+}
+
+model UserPreference {
+  id         String   @id @default(uuid())
+  userId     String
+  categoryId String
+  score      Float    @default(1.0) // Điểm sở thích (1-5)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@map("user_preferences")
+}
+
+model ProductView {
+  id        String   @id @default(uuid())
+  userId    String?
+  productId String
+  viewedAt  DateTime @default(now())
+  sessionId String? // For anonymous users
+
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_views")
+}
+
+model Notification {
+  id          String               @id @default(uuid())
+  title       String
+  message     String
+  type        NotificationType
+  priority    NotificationPriority @default(MEDIUM)
+  isGlobal    Boolean              @default(false) // true = gửi cho tất cả users
+  targetUsers String[]             // array user IDs (nếu không global)
+  metadata    Json?                // thông tin bổ sung (productId, orderId, etc.)
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  
+  // Quan hệ với notification reads
+  reads       NotificationRead[]
+  
+  @@map("notifications")
+}
+
+model NotificationRead {
+  id             String       @id @default(uuid())
+  notificationId String
+  userId         String
+  isRead         Boolean      @default(false)
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+  
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([notificationId, userId])
+  @@map("notification_reads")
 }

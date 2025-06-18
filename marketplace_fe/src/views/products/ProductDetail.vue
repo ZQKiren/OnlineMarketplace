@@ -78,7 +78,7 @@
             <div class="product-header">
               <!-- Category Badge -->
               <div class="category-badge">
-                <i class="material-icons">category</i>
+                <i class="material-icons">restaurant</i>
                 <span>{{ product.category.name }}</span>
               </div>
 
@@ -320,6 +320,14 @@
             @review-updated="handleReviewUpdated"
           />
         </div>
+        <!-- Similar Products Section -->
+        <div class="similar-products-section">
+          <SimilarProducts 
+            v-if="product" 
+            :product-id="product.id" 
+            :limit="6" 
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -337,6 +345,8 @@ import ProductReviews from '@/components/product/ProductReviews.vue'
 import ChatWidget from '@/components/chat/ChatWidget.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { getStaticUrl } from '@/services/api'
+import { useRecommendationStore } from '@/stores/recommendation'
+import SimilarProducts from '@/components/recommendation/SimilarProducts.vue'
 
 export default {
   name: 'ProductDetail',
@@ -352,13 +362,15 @@ export default {
     const cartStore = useCartStore()
     const chatStore = useChatStore()
     const toast = useToast()
+    const recommendationStore = useRecommendationStore()
     
     return {
       route,
       authStore,
       cartStore,
       chatStore,
-      toast
+      toast,
+      recommendationStore
     }
   },
   
@@ -404,6 +416,12 @@ export default {
   },
   
   methods: {
+    async trackProductView() {
+      if (this.productId) {
+        await this.recommendationStore.trackProductView(this.productId)
+      }
+    },
+
     async fetchProduct() {
       this.loading = true
       this.error = null
@@ -415,6 +433,8 @@ export default {
         if (this.product.images && this.product.images.length > 0) {
           this.selectedImage = this.product.images[0]
         }
+
+        await this.trackProductView()
         
         if (this.authStore.isAuthenticated) {
           await this.checkCanReview()
@@ -485,7 +505,6 @@ export default {
     },
     
     openImageModal() {
-      // Implement image modal/lightbox
       console.log('Open image modal')
     },
     
@@ -1299,5 +1318,11 @@ export default {
   to {
     transform: rotate(360deg);
   }
+}
+
+.similar-products-section {
+  margin-top: 50px;
+  padding-top: 50px;
+  border-top: 1px solid #e0e0e0;
 }
 </style>
