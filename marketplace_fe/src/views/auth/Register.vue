@@ -6,7 +6,7 @@
         <!-- Header -->
         <div class="auth-header">
           <div class="logo">
-            <i class="material-icons">store</i>
+            <Store class="logo-icon" />
             <h1>ShopApp</h1>
           </div>
           <h2>Create Account</h2>
@@ -15,13 +15,13 @@
 
         <!-- Error Message -->
         <div v-if="errorMessage" class="error-alert">
-          <i class="material-icons">error_outline</i>
+          <AlertCircle class="alert-icon" />
           <span>{{ errorMessage }}</span>
         </div>
 
         <!-- Success Message -->
         <div v-if="successMessage" class="success-alert">
-          <i class="material-icons">check_circle</i>
+          <CheckCircle class="alert-icon" />
           <span>{{ successMessage }}</span>
         </div>
 
@@ -29,7 +29,7 @@
         <form @submit.prevent="handleRegister" class="auth-form">
           <div class="input-group">
             <div class="input-wrapper">
-              <i class="material-icons">person</i>
+              <User class="input-icon" />
               <input 
                 type="text" 
                 v-model="form.name"
@@ -44,7 +44,7 @@
 
           <div class="input-group">
             <div class="input-wrapper">
-              <i class="material-icons">email</i>
+              <Mail class="input-icon" />
               <input 
                 type="email" 
                 v-model="form.email"
@@ -59,7 +59,7 @@
 
           <div class="input-group">
             <div class="input-wrapper">
-              <i class="material-icons">phone</i>
+              <Phone class="input-icon" />
               <input 
                 type="tel" 
                 v-model="form.phone"
@@ -73,7 +73,7 @@
 
           <div class="input-group">
             <div class="input-wrapper">
-              <i class="material-icons">lock</i>
+              <Lock class="input-icon" />
               <input 
                 :type="showPassword ? 'text' : 'password'" 
                 v-model="form.password"
@@ -87,7 +87,8 @@
                 class="password-toggle"
                 @click="showPassword = !showPassword"
               >
-                <i class="material-icons">{{ showPassword ? 'visibility_off' : 'visibility' }}</i>
+                <Eye v-if="!showPassword" class="toggle-icon" />
+                <EyeOff v-else class="toggle-icon" />
               </button>
             </div>
             <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
@@ -96,7 +97,7 @@
 
           <div class="input-group">
             <div class="input-wrapper">
-              <i class="material-icons">lock_outline</i>
+              <LockKeyhole class="input-icon" />
               <input 
                 :type="showConfirmPassword ? 'text' : 'password'" 
                 v-model="form.confirmPassword"
@@ -110,7 +111,8 @@
                 class="password-toggle"
                 @click="showConfirmPassword = !showConfirmPassword"
               >
-                <i class="material-icons">{{ showConfirmPassword ? 'visibility_off' : 'visibility' }}</i>
+                <Eye v-if="!showConfirmPassword" class="toggle-icon" />
+                <EyeOff v-else class="toggle-icon" />
               </button>
             </div>
             <span v-if="errors.confirmPassword" class="error-text">{{ errors.confirmPassword }}</span>
@@ -156,27 +158,27 @@
       <div class="side-panel">
         <div class="side-content">
           <div class="side-illustration">
-            <i class="material-icons">account_circle</i>
-            <i class="material-icons">shopping_bag</i>
-            <i class="material-icons">card_giftcard</i>
+            <UserPlus class="float-icon" />
+            <ShoppingBag class="float-icon" />
+            <Gift class="float-icon" />
           </div>
           <h3>Join Our Community</h3>
           <p>Create your account to unlock exclusive deals, personalized recommendations, and seamless shopping experience.</p>
           <div class="benefits">
             <div class="benefit">
-              <i class="material-icons">local_offer</i>
+              <Tag class="benefit-icon" />
               <span>Exclusive Offers</span>
             </div>
             <div class="benefit">
-              <i class="material-icons">star</i>
+              <Star class="benefit-icon" />
               <span>Loyalty Rewards</span>
             </div>
             <div class="benefit">
-              <i class="material-icons">track_changes</i>
+              <Package class="benefit-icon" />
               <span>Order Tracking</span>
             </div>
             <div class="benefit">
-              <i class="material-icons">favorite</i>
+              <Heart class="benefit-icon" />
               <span>Wishlist</span>
             </div>
           </div>
@@ -192,6 +194,27 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import { validators } from '@/utils/validators'
+
+// Lucide Icons
+import {
+  Store,
+  User,
+  Mail,
+  Phone,
+  Lock,
+  LockKeyhole,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  CheckCircle,
+  UserPlus,
+  ShoppingBag,
+  Gift,
+  Tag,
+  Star,
+  Package,
+  Heart
+} from 'lucide-vue-next'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -442,8 +465,9 @@ const handleRegister = async () => {
     gap: 12px;
     margin-bottom: 25px;
     
-    .material-icons {
-      font-size: 32px;
+    .logo-icon {
+      width: 32px;
+      height: 32px;
       color: $primary-color;
     }
     
@@ -480,8 +504,9 @@ const handleRegister = async () => {
   margin-bottom: 20px;
   border-left: 4px solid #c62828;
   
-  .material-icons {
-    font-size: 20px;
+  .alert-icon {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -496,8 +521,9 @@ const handleRegister = async () => {
   margin-bottom: 20px;
   border-left: 4px solid #4caf50;
   
-  .material-icons {
-    font-size: 20px;
+  .alert-icon {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -524,10 +550,11 @@ const handleRegister = async () => {
     box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
   }
   
-  .material-icons {
+  .input-icon {
     color: #6c757d;
     margin: 0 15px;
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
   }
   
   input {
@@ -554,9 +581,16 @@ const handleRegister = async () => {
     padding: 0 15px;
     cursor: pointer;
     color: #6c757d;
+    display: flex;
+    align-items: center;
     
     &:hover {
       color: $primary-color;
+    }
+    
+    .toggle-icon {
+      width: 20px;
+      height: 20px;
     }
   }
 }
@@ -731,8 +765,9 @@ const handleRegister = async () => {
   gap: 15px;
   margin-bottom: 35px;
   
-  .material-icons {
-    font-size: 40px;
+  .float-icon {
+    width: 40px;
+    height: 40px;
     opacity: 0.9;
     animation: float 3s ease-in-out infinite;
     
@@ -772,8 +807,9 @@ const handleRegister = async () => {
   align-items: center;
   gap: 10px;
   
-  .material-icons {
-    font-size: 18px;
+  .benefit-icon {
+    width: 18px;
+    height: 18px;
     color: #4caf50;
   }
   

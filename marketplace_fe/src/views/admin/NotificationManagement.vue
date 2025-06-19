@@ -5,12 +5,12 @@
       <div class="page-header">
         <div class="header-content">
           <div class="header-title">
-            <i class="material-icons">notifications_active</i>
+            <Bell class="header-icon" />
             <h4>Quản lý thông báo</h4>
           </div>
           <div class="header-actions">
             <button @click="openCreateModal" class="btn-create">
-              <i class="material-icons">add</i>
+              <Plus class="btn-icon" />
               Tạo thông báo mới
             </button>
           </div>
@@ -22,7 +22,7 @@
         <div class="stats-grid">
           <div class="stat-card blue">
             <div class="stat-icon">
-              <i class="material-icons">notifications</i>
+              <Bell class="stat-icon-svg" />
             </div>
             <div class="stat-content">
               <div class="stat-number">{{ stats.total }}</div>
@@ -32,7 +32,7 @@
 
           <div class="stat-card green">
             <div class="stat-icon">
-              <i class="material-icons">mark_email_read</i>
+              <MailCheck class="stat-icon-svg" />
             </div>
             <div class="stat-content">
               <div class="stat-number">{{ stats.read }}</div>
@@ -42,7 +42,7 @@
 
           <div class="stat-card orange">
             <div class="stat-icon">
-              <i class="material-icons">mark_email_unread</i>
+              <MailOpen class="stat-icon-svg" />
             </div>
             <div class="stat-content">
               <div class="stat-number">{{ stats.unread }}</div>
@@ -52,7 +52,7 @@
 
           <div class="stat-card red">
             <div class="stat-icon">
-              <i class="material-icons">delete</i>
+              <Trash2 class="stat-icon-svg" />
             </div>
             <div class="stat-content">
               <div class="stat-number">{{ stats.deleted }}</div>
@@ -66,7 +66,7 @@
       <div class="filter-section">
         <div class="filter-card">
           <div class="filter-header">
-            <i class="material-icons">filter_list</i>
+            <Filter class="filter-icon" />
             <span>Bộ lọc và tìm kiếm</span>
           </div>
 
@@ -75,7 +75,7 @@
               <div class="filter-item">
                 <label class="filter-label">Tìm kiếm</label>
                 <div class="search-wrapper">
-                  <i class="material-icons">search</i>
+                  <Search class="search-icon" />
                   <input v-model="searchQuery" @input="debounceSearch" type="text"
                     placeholder="Tìm kiếm theo tiêu đề hoặc nội dung...">
                 </div>
@@ -168,11 +168,11 @@
                   <td>
                     <div class="scope-info">
                       <span v-if="notification.isGlobal" class="scope-badge global">
-                        <i class="material-icons">public</i>
+                        <Globe class="scope-icon" />
                         Toàn bộ
                       </span>
                       <span v-else class="scope-badge targeted">
-                        <i class="material-icons">group</i>
+                        <Users class="scope-icon" />
                         {{ (notification.targetUsers || []).length }} người
                       </span>
                     </div>
@@ -190,10 +190,10 @@
                   <td>
                     <div class="action-buttons">
                       <button @click="viewNotification(notification)" class="action-btn view" title="Xem chi tiết">
-                        <i class="material-icons">visibility</i>
+                        <Eye class="action-icon" />
                       </button>
                       <button @click="confirmDelete(notification.id)" class="action-btn delete" title="Xóa thông báo">
-                        <i class="material-icons">delete</i>
+                        <Trash2 class="action-icon" />
                       </button>
                     </div>
                   </td>
@@ -205,7 +205,7 @@
           <!-- Empty State -->
           <div v-else class="empty-state">
             <div class="empty-icon">
-              <i class="material-icons">notifications_none</i>
+              <BellOff class="empty-icon-svg" />
             </div>
             <h6>Không có thông báo</h6>
             <p>Chưa có thông báo nào được tạo. Hãy tạo thông báo đầu tiên!</p>
@@ -221,7 +221,7 @@
             <ul class="pagination">
               <li :class="{ disabled: meta.page === 1 }">
                 <a @click="goToPage(meta.page - 1)" class="pagination-btn">
-                  <i class="material-icons">chevron_left</i>
+                  <ChevronLeft class="pagination-icon" />
                 </a>
               </li>
 
@@ -231,7 +231,7 @@
 
               <li :class="{ disabled: meta.page === meta.totalPages }">
                 <a @click="goToPage(meta.page + 1)" class="pagination-btn">
-                  <i class="material-icons">chevron_right</i>
+                  <ChevronRight class="pagination-icon" />
                 </a>
               </li>
             </ul>
@@ -246,7 +246,7 @@
         <div class="modal-header">
           <h5>Tạo thông báo mới</h5>
           <button @click="closeCreateModal" class="modal-close-btn">
-            <i class="material-icons">close</i>
+            <X class="modal-close-icon" />
           </button>
         </div>
 
@@ -330,8 +330,8 @@
             Hủy
           </button>
           <button @click="createNotification" :disabled="creating" class="btn-submit">
-            <i v-if="creating" class="material-icons spinning">refresh</i>
-            <i v-else class="material-icons">add</i>
+            <RefreshCw v-if="creating" class="btn-icon spinning" />
+            <Plus v-else class="btn-icon" />
             {{ creating ? 'Đang tạo...' : 'Tạo thông báo' }}
           </button>
         </div>
@@ -344,7 +344,7 @@
         <div class="modal-header">
           <h5>Chi tiết thông báo</h5>
           <button @click="closeViewModal" class="modal-close-btn">
-            <i class="material-icons">close</i>
+            <X class="modal-close-icon" />
           </button>
         </div>
 
@@ -413,8 +413,44 @@ import { useToast } from 'vue-toastification'
 import dayjs from 'dayjs'
 import _ from 'lodash-es'
 
+// Lucide Icons
+import {
+  Bell,
+  BellOff,
+  Plus,
+  MailCheck,
+  MailOpen,
+  Trash2,
+  Filter,
+  Search,
+  Globe,
+  Users,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  RefreshCw
+} from 'lucide-vue-next'
+
 export default {
   name: 'AdminNotificationManagement',
+  components: {
+    Bell,
+    BellOff,
+    Plus,
+    MailCheck,
+    MailOpen,
+    Trash2,
+    Filter,
+    Search,
+    Globe,
+    Users,
+    Eye,
+    ChevronLeft,
+    ChevronRight,
+    X,
+    RefreshCw
+  },
   setup() {
     const toast = useToast()
 
@@ -464,13 +500,10 @@ export default {
       return pages
     })
 
-    // ✅ FIXED: Enhanced loadNotifications
-    // ✅ FIXED: loadNotifications method trong AdminNotificationManagement.vue
     const loadNotifications = async (page = 1) => {
       try {
         loading.value = true
 
-        // ✅ FIX: Ensure page is valid
         const validPage = Math.max(1, parseInt(page) || 1)
 
         const params = {
@@ -478,7 +511,6 @@ export default {
           limit: 20,
         }
 
-        // ✅ Only add non-empty filters
         if (filterType.value && filterType.value.trim() !== '' && filterType.value !== 'ALL') {
           params.type = filterType.value.trim()
         }
@@ -487,13 +519,8 @@ export default {
           params.search = searchQuery.value.trim()
         }
 
-        console.log('🔍 Loading notifications with params:', params)
-
         const response = await notificationService.getAllNotifications(params)
 
-        console.log('✅ Response received:', response)
-
-        // ✅ Safe property access
         notifications.value = response?.data || []
         meta.value = {
           total: response?.meta?.total || 0,
@@ -509,12 +536,9 @@ export default {
         stats.unread = Math.floor(total * 0.2)
         stats.deleted = Math.floor(total * 0.1)
 
-        console.log('✅ Data loaded successfully')
-
       } catch (error) {
-        console.error('❌ Error loading notifications:', error)
+        console.error('Error loading notifications:', error)
 
-        // ✅ Reset to safe state on error
         notifications.value = []
         meta.value = {
           total: 0,
@@ -527,10 +551,8 @@ export default {
         stats.unread = 0
         stats.deleted = 0
 
-        // ✅ Better error messages
         if (error.status === 400) {
           toast.error('Tham số không hợp lệ. Đang tải lại...')
-          // ✅ Retry with default params
           setTimeout(() => {
             loadNotifications(1)
           }, 1000)
@@ -545,9 +567,7 @@ export default {
     const openCreateModal = async () => {
       showCreateModal.value = true
       document.body.style.overflow = 'hidden'
-
       await nextTick()
-      console.log('✅ Modal opened')
     }
 
     const closeCreateModal = () => {
@@ -566,7 +586,6 @@ export default {
       try {
         creating.value = true
 
-        // ✅ Validation
         if (!newNotification.title.trim()) {
           toast.error('Vui lòng nhập tiêu đề')
           return
@@ -590,7 +609,6 @@ export default {
           isGlobal: newNotification.isGlobal
         }
 
-        // Handle target users if not global
         if (!data.isGlobal) {
           const emails = targetUserEmails.value
             .split(',')
@@ -605,8 +623,6 @@ export default {
           data.targetUsers = emails
         }
 
-        console.log('🔍 Creating notification:', data)
-
         await notificationService.createNotification(data)
 
         toast.success('Tạo thông báo thành công!')
@@ -614,7 +630,7 @@ export default {
         await loadNotifications()
 
       } catch (error) {
-        console.error('❌ Error creating notification:', error)
+        console.error('Error creating notification:', error)
         toast.error('Không thể tạo thông báo: ' + (error.message || 'Lỗi không xác định'))
       } finally {
         creating.value = false
@@ -633,7 +649,7 @@ export default {
         toast.success('Xóa thông báo thành công!')
         await loadNotifications()
       } catch (error) {
-        console.error('❌ Error deleting notification:', error)
+        console.error('Error deleting notification:', error)
         toast.error('Không thể xóa thông báo: ' + (error.message || 'Lỗi không xác định'))
       }
     }
@@ -727,14 +743,11 @@ export default {
       }
     }
 
-    // ✅ Safe onMounted
     onMounted(async () => {
-      console.log('🚀 AdminNotificationManagement mounted')
       try {
         await loadNotifications()
-        console.log('✅ Initial load complete')
       } catch (error) {
-        console.error('❌ Error during initial load:', error)
+        console.error('Error during initial load:', error)
       }
     })
 
@@ -811,9 +824,10 @@ export default {
   align-items: center;
   gap: 12px;
 
-  i {
+  .header-icon {
     color: #1976d2;
-    font-size: 28px;
+    width: 28px;
+    height: 28px;
   }
 
   h4 {
@@ -840,8 +854,9 @@ export default {
     background: #1565c0;
   }
 
-  i {
-    font-size: 20px;
+  .btn-icon {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -909,8 +924,9 @@ export default {
     color: #d32f2f;
   }
 
-  i {
-    font-size: 28px;
+  .stat-icon-svg {
+    width: 28px;
+    height: 28px;
   }
 }
 
@@ -948,8 +964,10 @@ export default {
   color: #2c3e50;
   font-weight: 500;
 
-  i {
+  .filter-icon {
     color: #1976d2;
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -976,11 +994,12 @@ export default {
   display: flex;
   align-items: center;
 
-  i {
+  .search-icon {
     position: absolute;
     left: 12px;
     color: #6c757d;
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
   }
 
   input {
@@ -1198,8 +1217,9 @@ export default {
       color: #ff9800;
     }
 
-    i {
-      font-size: 16px;
+    .scope-icon {
+      width: 16px;
+      height: 16px;
     }
   }
 }
@@ -1260,8 +1280,9 @@ export default {
     }
   }
 
-  i {
-    font-size: 18px;
+  .action-icon {
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -1278,8 +1299,9 @@ export default {
 .empty-icon {
   margin-bottom: 20px;
 
-  i {
-    font-size: 80px;
+  .empty-icon-svg {
+    width: 80px;
+    height: 80px;
     color: #e0e0e0;
   }
 }
@@ -1352,8 +1374,9 @@ export default {
     border-color: #1976d2;
   }
 
-  i {
-    font-size: 20px;
+  .pagination-icon {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -1423,8 +1446,9 @@ export default {
     background: rgba(255, 255, 255, 0.2);
   }
 
-  i {
-    font-size: 20px;
+  .modal-close-icon {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -1488,7 +1512,6 @@ export default {
   min-height: 80px;
 }
 
-// Custom Select Styles
 .form-select {
   width: 100% !important;
   padding: 12px 16px !important;
@@ -1510,15 +1533,8 @@ export default {
     border-color: #1976d2 !important;
     box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1) !important;
   }
-
-  option {
-    padding: 8px 12px;
-    background: white;
-    color: #2c3e50;
-  }
 }
 
-// Checkbox Styles
 .checkbox-container {
   display: flex;
   align-items: center;
@@ -1589,6 +1605,11 @@ export default {
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  .btn-icon {
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -1693,7 +1714,6 @@ export default {
   }
 
   .notifications-table {
-
     th,
     td {
       padding: 12px 8px;

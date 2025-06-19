@@ -11,7 +11,7 @@
       }"
       title="Thông báo"
     >
-      <i class="material-icons">notifications</i>
+      <Bell class="bell-icon" />
       
       <!-- Unread Count Badge -->
       <span 
@@ -38,7 +38,7 @@
       <!-- Header -->
       <div class="notification-header">
         <h6 class="notification-title">
-          <i class="material-icons">notifications</i>
+          <Bell class="title-icon" />
           Thông báo
           <span v-if="unreadCount > 0" class="unread-count">({{ unreadCount }})</span>
         </h6>
@@ -51,7 +51,7 @@
             :disabled="loading"
             title="Làm mới"
           >
-            <i class="material-icons" :class="{ 'spinning': loading }">refresh</i>
+            <RefreshCw class="action-icon" :class="{ 'spinning': loading }" />
           </button>
           
           <!-- Mark All Read Button -->
@@ -61,7 +61,7 @@
             class="action-btn mark-all-btn"
             title="Đánh dấu tất cả đã đọc"
           >
-            <i class="material-icons">done_all</i>
+            <CheckCheck class="action-icon" />
           </button>
           
           <!-- Settings Button -->
@@ -70,7 +70,7 @@
             class="action-btn"
             title="Xem tất cả"
           >
-            <i class="material-icons">settings</i>
+            <Settings class="action-icon" />
           </button>
         </div>
       </div>
@@ -83,10 +83,10 @@
 
       <!-- Empty State -->
       <div v-else-if="!recentNotifications.length" class="notification-empty">
-        <i class="material-icons">notifications_none</i>
+        <BellOff class="empty-icon" />
         <p>Không có thông báo mới</p>
         <button @click="refreshNotifications" class="refresh-btn">
-          <i class="material-icons">refresh</i>
+          <RefreshCw class="refresh-icon" />
           Làm mới
         </button>
       </div>
@@ -106,9 +106,11 @@
         >
           <!-- Notification Icon -->
           <div class="notification-icon">
-            <i class="material-icons" :class="getNotificationIconClass(notification.type)">
-              {{ getNotificationIcon(notification.type) }}
-            </i>
+            <component 
+              :is="getNotificationIcon(notification.type)" 
+              class="notification-type-icon"
+              :class="getNotificationIconClass(notification.type)"
+            />
           </div>
 
           <!-- Notification Content -->
@@ -134,21 +136,20 @@
       <!-- Footer -->
       <div v-if="recentNotifications.length" class="notification-footer">
         <button @click="goToNotifications" class="view-all-btn">
-          <i class="material-icons">visibility</i>
+          <Eye class="view-all-icon" />
           Xem tất cả thông báo
         </button>
       </div>
 
-      <!-- Connection Status -->
-      <div class="connection-info" :class="{ 'connected': isConnected }">
-        <i class="material-icons">
-          {{ isConnected ? 'wifi' : 'wifi_off' }}
-        </i>
-        <span>
-          {{ isConnected ? 'Đã kết nối' : 'Mất kết nối' }}
-        </span>
+      <!-- Connection Status - Chỉ hiển thị khi mất kết nối -->
+      <div 
+        v-if="!isConnected" 
+        class="connection-info disconnected"
+        :class="{ 'show': !isConnected }"
+      >
+        <WifiOff class="connection-icon" />
+        <span>Mất kết nối</span>
         <button 
-          v-if="!isConnected" 
           @click="reconnectSocket" 
           class="reconnect-btn"
         >
@@ -172,6 +173,28 @@ import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
 
+// Lucide Icons
+import {
+  Bell,
+  BellOff,
+  RefreshCw,
+  CheckCheck,
+  Settings,
+  Eye,
+  Wifi,
+  WifiOff,
+  ShoppingCart,
+  Sparkles,
+  Tag,
+  AlertTriangle,
+  Info,
+  Megaphone,
+  MessageCircle,
+  Clock,
+  Shield,
+  CreditCard
+} from 'lucide-vue-next'
+
 const router = useRouter()
 const notificationStore = useNotificationStore()
 const authStore = useAuthStore()
@@ -187,10 +210,8 @@ const recentNotifications = computed(() => notificationStore.recentNotifications
 const loading = computed(() => notificationStore.loading)
 const isConnected = computed(() => notificationStore.isConnected)
 
-// ✅ FIX: Control pulse animation properly
+// Control pulse animation properly
 watch(() => unreadCount.value, (newCount, oldCount) => {
-  console.log('🔔 Unread count changed:', { oldCount, newCount })
-  
   // Clear any existing timeout
   if (pulseTimeout.value) {
     clearTimeout(pulseTimeout.value)
@@ -199,18 +220,15 @@ watch(() => unreadCount.value, (newCount, oldCount) => {
   
   // Only pulse when count increases (new notification received)
   if (newCount > 0 && oldCount !== undefined && newCount > oldCount) {
-    console.log('✨ Starting pulse animation for new notification')
     shouldPulse.value = true
     
     // Stop pulsing after 3 seconds
     pulseTimeout.value = setTimeout(() => {
       shouldPulse.value = false
-      console.log('🛑 Stopped pulse animation')
     }, 3000)
   } else if (newCount === 0) {
     // Stop pulsing immediately when no unread notifications
     shouldPulse.value = false
-    console.log('🛑 No unread notifications, stopped pulse')
   }
 })
 
@@ -244,7 +262,6 @@ const refreshNotifications = async () => {
 const markAllAsRead = async () => {
   try {
     await notificationStore.markAllAsRead()
-    // Animation will stop automatically due to watch on unreadCount
   } catch (error) {
     console.error('Error marking all as read:', error)
   }
@@ -279,21 +296,21 @@ const reconnectSocket = () => {
   }
 }
 
-// ✅ IMPROVED: Utility methods
+// Utility methods - Now return Lucide icon component names
 const getNotificationIcon = (type) => {
   const icons = {
-    'ORDER_UPDATE': 'shopping_cart',
-    'NEW_PRODUCT': 'new_releases',
-    'PRICE_DROP': 'local_offer',
-    'STOCK_ALERT': 'warning',
-    'SYSTEM_UPDATE': 'info',
-    'PROMOTION': 'campaign',
-    'MESSAGE': 'message',
-    'REMINDER': 'schedule',
-    'SECURITY': 'security',
-    'PAYMENT': 'payment'
+    'ORDER_UPDATE': 'ShoppingCart',
+    'NEW_PRODUCT': 'Sparkles',
+    'PRICE_DROP': 'Tag',
+    'STOCK_ALERT': 'AlertTriangle',
+    'SYSTEM_UPDATE': 'Info',
+    'PROMOTION': 'Megaphone',
+    'MESSAGE': 'MessageCircle',
+    'REMINDER': 'Clock',
+    'SECURITY': 'Shield',
+    'PAYMENT': 'CreditCard'
   }
-  return icons[type] || 'notifications'
+  return icons[type] || 'Bell'
 }
 
 const getNotificationIconClass = (type) => {
@@ -355,7 +372,7 @@ onUnmounted(() => {
 .notification-bell-wrapper {
   position: relative;
   display: inline-block;
-  margin: 0 4px; // ✅ Better spacing
+  margin: 0 4px;
 }
 
 .notification-bell-btn {
@@ -370,7 +387,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px; // ✅ Fixed size for consistency
+  width: 44px;
   height: 44px;
 
   &:hover {
@@ -382,15 +399,14 @@ onUnmounted(() => {
     background-color: rgba(255, 255, 255, 0.2);
   }
 
-  // ✅ FIX: Controlled pulse animation
+  // Controlled pulse animation
   &.pulse-animation {
     animation: bellPulse 2s ease-in-out infinite;
   }
 
-  // ✅ REMOVED: has-notifications class animation (causes unwanted shaking)
-
-  i {
-    font-size: 22px; // ✅ Slightly smaller for better balance
+  .bell-icon {
+    width: 22px;
+    height: 22px;
   }
 }
 
@@ -408,8 +424,6 @@ onUnmounted(() => {
   text-align: center;
   border: 2px solid white;
   line-height: 1.2;
-  
-  // ✅ Smooth appear animation
   animation: badgeAppear 0.3s ease-out;
 }
 
@@ -438,14 +452,14 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 380px;
+  width: 320px;
   max-width: 90vw;
   background: white;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   border: 1px solid #e0e0e0;
-  max-height: 500px;
+  max-height: 450px;
   overflow: hidden;
   animation: dropdownSlide 0.3s ease;
 }
@@ -454,46 +468,47 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
   background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
 
   .notification-title {
     margin: 0;
     color: #333;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 
-    i {
-      font-size: 20px;
+    .title-icon {
+      width: 18px;
+      height: 18px;
       color: #1976d2;
     }
 
     .unread-count {
       color: #f44336;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 500;
     }
   }
 
   .notification-actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
   }
 
   .action-btn {
     background: none;
     border: none;
-    padding: 8px;
+    padding: 6px;
     border-radius: 50%;
     cursor: pointer;
     color: #666;
     transition: all 0.2s ease;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -510,8 +525,9 @@ onUnmounted(() => {
       transform: none;
     }
 
-    i {
-      font-size: 16px;
+    .action-icon {
+      width: 14px;
+      height: 14px;
 
       &.spinning {
         animation: spin 1s linear infinite;
@@ -555,10 +571,11 @@ onUnmounted(() => {
   text-align: center;
   color: #999;
 
-  i {
-    font-size: 42px;
+  .empty-icon {
+    width: 42px;
+    height: 42px;
     color: #ddd;
-    margin-bottom: 12px;
+    margin: 0 auto 12px;
   }
 
   p {
@@ -584,11 +601,16 @@ onUnmounted(() => {
       background: #1565c0;
       transform: translateY(-1px);
     }
+
+    .refresh-icon {
+      width: 14px;
+      height: 14px;
+    }
   }
 }
 
 .notification-list {
-  max-height: 320px;
+  max-height: 280px;
   overflow-y: auto;
 
   &::-webkit-scrollbar {
@@ -611,7 +633,7 @@ onUnmounted(() => {
 
 .notification-item {
   display: flex;
-  padding: 14px 20px;
+  padding: 10px 16px;
   border-bottom: 1px solid #f5f5f5;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -644,7 +666,7 @@ onUnmounted(() => {
   }
 
   &.global {
-    .notification-icon i {
+    .notification-type-icon {
       color: #ff9800;
     }
   }
@@ -655,18 +677,17 @@ onUnmounted(() => {
 }
 
 .notification-icon {
-  margin-right: 14px;
+  margin-right: 10px;
   display: flex;
   align-items: flex-start;
   padding-top: 2px;
   
-  i {
-    font-size: 18px;
+  .notification-type-icon {
+    width: 16px;
+    height: 16px;
     color: #666;
-    width: 18px;
-    text-align: center;
     
-    // ✅ Icon color coding
+    // Icon color coding
     &.icon-order { color: #2196f3; }
     &.icon-new { color: #4caf50; }
     &.icon-sale { color: #ff5722; }
@@ -685,16 +706,21 @@ onUnmounted(() => {
   min-width: 0;
 
   .notification-item-title {
-    margin: 0 0 4px;
-    font-size: 14px;
+    margin: 0 0 3px;
+    font-size: 13px;
     font-weight: 600;
     color: #333;
     line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .notification-message {
-    margin: 0 0 8px;
-    font-size: 13px;
+    margin: 0 0 6px;
+    font-size: 12px;
     color: #666;
     line-height: 1.4;
     display: -webkit-box;
@@ -706,18 +732,18 @@ onUnmounted(() => {
 
   .notification-meta {
     display: flex;
-    gap: 10px;
-    font-size: 11px;
+    gap: 8px;
+    font-size: 10px;
     color: #999;
     align-items: center;
 
     .notification-type {
       background: #e3f2fd;
       color: #1976d2;
-      padding: 2px 8px;
-      border-radius: 8px;
+      padding: 1px 6px;
+      border-radius: 6px;
       font-weight: 500;
-      font-size: 10px;
+      font-size: 9px;
     }
   }
 }
@@ -734,7 +760,7 @@ onUnmounted(() => {
 }
 
 .notification-footer {
-  padding: 12px 20px;
+  padding: 10px 16px;
   border-top: 1px solid #f0f0f0;
   background: #fafafa;
 
@@ -743,15 +769,15 @@ onUnmounted(() => {
     background: none;
     border: 1px solid #1976d2;
     color: #1976d2;
-    padding: 10px 16px;
-    border-radius: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     transition: all 0.2s ease;
 
     &:hover {
@@ -759,41 +785,53 @@ onUnmounted(() => {
       color: white;
       transform: translateY(-1px);
     }
+
+    .view-all-icon {
+      width: 14px;
+      height: 14px;
+    }
   }
 }
 
+// CẢI THIỆN: Connection Info - Chỉ hiển thị khi mất kết nối
 .connection-info {
-  padding: 8px 20px;
+  padding: 6px 16px;
   background: #fff3cd;
   border-top: 1px solid #f0f0f0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 11px;
   color: #856404;
+  transition: all 0.3s ease;
 
-  &.connected {
-    background: #d4edda;
-    color: #155724;
+  &.disconnected {
+    background: #f8d7da;
+    color: #721c24;
+    border-top-color: #f5c6cb;
+    
+    // Animation khi mất kết nối
+    animation: connectionAlert 0.5s ease-in-out;
   }
 
-  i {
-    font-size: 14px;
+  .connection-icon {
+    width: 12px;
+    height: 12px;
   }
 
   .reconnect-btn {
     margin-left: auto;
-    background: #ffc107;
-    color: #212529;
+    background: #dc3545;
+    color: white;
     border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 10px;
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
-      background: #e0a800;
+      background: #c82333;
       transform: translateY(-1px);
     }
   }
@@ -809,7 +847,7 @@ onUnmounted(() => {
   background: transparent;
 }
 
-// ✅ IMPROVED ANIMATIONS
+// ANIMATIONS
 @keyframes bellPulse {
   0% {
     transform: scale(1);
@@ -857,10 +895,21 @@ onUnmounted(() => {
   }
 }
 
-// ✅ RESPONSIVE IMPROVEMENTS
+@keyframes connectionAlert {
+  0% { 
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
+  }
+  100% { 
+    transform: translateY(0);
+    box-shadow: none;
+  }
+}
+
+// RESPONSIVE IMPROVEMENTS
 @media (max-width: 480px) {
   .notification-dropdown {
-    width: 340px;
+    width: 300px;
     right: -10px;
   }
   
@@ -868,8 +917,9 @@ onUnmounted(() => {
     width: 40px;
     height: 40px;
     
-    i {
-      font-size: 20px;
+    .bell-icon {
+      width: 20px;
+      height: 20px;
     }
   }
 }

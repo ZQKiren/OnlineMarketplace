@@ -2,12 +2,6 @@
   <div class="container admin-dashboard">
     <div class="dashboard-header">
       <h4>Admin Dashboard</h4>
-      <div class="header-actions">
-        <button class="btn waves-effect waves-light blue" @click="refreshDashboard">
-          <i class="material-icons left">refresh</i>
-          Refresh
-        </button>
-      </div>
     </div>
     
     <div v-if="loading" class="loading-spinner">
@@ -19,13 +13,13 @@
       <div class="stats-grid">
         <div class="stat-card blue">
           <div class="stat-icon">
-            <i class="material-icons">people</i>
+            <Users class="stat-icon-svg" />
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ stats.totalUsers }}</div>
             <div class="stat-label">Total Users</div>
             <div class="stat-trend positive">
-              <i class="material-icons">trending_up</i>
+              <TrendingUp class="trend-icon" />
               +12%
             </div>
           </div>
@@ -33,13 +27,13 @@
         
         <div class="stat-card green">
           <div class="stat-icon">
-            <i class="material-icons">inventory</i>
+            <Package class="stat-icon-svg" />
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ stats.totalProducts }}</div>
             <div class="stat-label">Total Products</div>
             <div class="stat-trend positive">
-              <i class="material-icons">trending_up</i>
+              <TrendingUp class="trend-icon" />
               +8%
             </div>
           </div>
@@ -47,13 +41,13 @@
         
         <div class="stat-card orange">
           <div class="stat-icon">
-            <i class="material-icons">shopping_cart</i>
+            <ShoppingCart class="stat-icon-svg" />
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ stats.totalOrders }}</div>
             <div class="stat-label">Total Orders</div>
             <div class="stat-trend neutral">
-              <i class="material-icons">trending_flat</i>
+              <Minus class="trend-icon" />
               0%
             </div>
           </div>
@@ -61,13 +55,13 @@
         
         <div class="stat-card purple">
           <div class="stat-icon">
-            <i class="material-icons">attach_money</i>
+            <DollarSign class="stat-icon-svg" />
           </div>
           <div class="stat-content">
             <div class="stat-number">${{ stats.totalRevenue.toFixed(2) }}</div>
             <div class="stat-label">Total Revenue</div>
             <div class="stat-trend positive">
-              <i class="material-icons">trending_up</i>
+              <TrendingUp class="trend-icon" />
               +15%
             </div>
           </div>
@@ -78,7 +72,7 @@
       <div class="section-card notification-section">
         <div class="section-header">
           <div class="section-title">
-            <i class="material-icons">notifications_active</i>
+            <Bell class="section-icon" />
             <h5>Notification Management</h5>
           </div>
           <router-link to="/admin/notifications" class="btn-flat blue-text">
@@ -90,7 +84,7 @@
         <div class="notification-stats">
           <div class="mini-stat">
             <div class="mini-stat-icon blue">
-              <i class="material-icons">notifications</i>
+              <Bell class="mini-stat-icon-svg" />
             </div>
             <div class="mini-stat-content">
               <div class="mini-stat-number">{{ notificationStats.total }}</div>
@@ -100,7 +94,7 @@
           
           <div class="mini-stat">
             <div class="mini-stat-icon green">
-              <i class="material-icons">check_circle</i>
+              <CheckCircle class="mini-stat-icon-svg" />
             </div>
             <div class="mini-stat-content">
               <div class="mini-stat-number">{{ notificationStats.delivered }}</div>
@@ -110,7 +104,7 @@
           
           <div class="mini-stat">
             <div class="mini-stat-icon orange">
-              <i class="material-icons">schedule</i>
+              <Clock class="mini-stat-icon-svg" />
             </div>
             <div class="mini-stat-content">
               <div class="mini-stat-number">{{ notificationStats.pending }}</div>
@@ -120,7 +114,7 @@
           
           <div class="mini-stat">
             <div class="mini-stat-icon purple">
-              <i class="material-icons">public</i>
+              <Globe class="mini-stat-icon-svg" />
             </div>
             <div class="mini-stat-content">
               <div class="mini-stat-number">{{ notificationStats.global }}</div>
@@ -135,7 +129,7 @@
             @click="sendTestNotification"
             class="action-btn primary"
           >
-            <i class="material-icons">send</i>
+            <Send class="action-icon" />
             Send Test
           </button>
           
@@ -143,7 +137,7 @@
             to="/admin/notifications/create" 
             class="action-btn success"
           >
-            <i class="material-icons">add_alert</i>
+            <BellPlus class="action-icon" />
             Create New
           </router-link>
           
@@ -151,7 +145,7 @@
             to="/admin/notifications" 
             class="action-btn info"
           >
-            <i class="material-icons">settings</i>
+            <Settings class="action-icon" />
             Manage All
           </router-link>
           
@@ -159,7 +153,7 @@
             @click="viewNotificationAnalytics"
             class="action-btn warning"
           >
-            <i class="material-icons">poll</i>
+            <BarChart3 class="action-icon" />
             Analytics
           </button>
         </div>
@@ -171,7 +165,7 @@
         <div class="section-card">
           <div class="section-header">
             <div class="section-title">
-              <i class="material-icons">history</i>
+              <History class="section-icon" />
               <h6>Recent Notifications</h6>
             </div>
             <router-link to="/admin/notifications" class="btn-flat blue-text">
@@ -181,7 +175,7 @@
           
           <div class="notifications-list">
             <div v-if="recentNotifications.length === 0" class="empty-state">
-              <i class="material-icons">notifications_none</i>
+              <BellOff class="empty-icon" />
               <p>No recent notifications</p>
             </div>
             
@@ -194,7 +188,7 @@
                 class="notification-icon"
                 :class="getNotificationIconClass(notification.type)"
               >
-                <i class="material-icons">{{ getNotificationIcon(notification.type) }}</i>
+                <component :is="getNotificationIcon(notification.type)" class="notification-type-icon" />
               </div>
               
               <div class="notification-content">
@@ -223,7 +217,7 @@
         <div class="section-card">
           <div class="section-header">
             <div class="section-title">
-              <i class="material-icons">trending_up</i>
+              <TrendingUp class="section-icon" />
               <h6>Revenue Trend</h6>
             </div>
             <div class="chart-period">
@@ -241,7 +235,7 @@
       <div class="section-card">
         <div class="section-header">
           <div class="section-title">
-            <i class="material-icons">receipt_long</i>
+            <Receipt class="section-icon" />
             <h5>Recent Orders</h5>
           </div>
           <router-link to="/admin/orders" class="btn-flat blue-text">
@@ -305,7 +299,7 @@
         <div class="section-card">
           <div class="section-header">
             <div class="section-title">
-              <i class="material-icons">star</i>
+              <Star class="section-icon" />
               <h6>Top Products</h6>
             </div>
           </div>
@@ -337,7 +331,7 @@
         <div class="section-card">
           <div class="section-header">
             <div class="section-title">
-              <i class="material-icons">dashboard</i>
+              <LayoutDashboard class="section-icon" />
               <h6>Quick Management</h6>
             </div>
           </div>
@@ -347,7 +341,7 @@
               to="/admin/products" 
               class="management-item"
             >
-              <i class="material-icons">inventory_2</i>
+              <Package2 class="management-icon" />
               <span>Products</span>
             </router-link>
             
@@ -355,7 +349,7 @@
               to="/admin/orders" 
               class="management-item"
             >
-              <i class="material-icons">receipt</i>
+              <Receipt class="management-icon" />
               <span>Orders</span>
             </router-link>
             
@@ -363,7 +357,7 @@
               to="/admin/users" 
               class="management-item"
             >
-              <i class="material-icons">people</i>
+              <Users class="management-icon" />
               <span>Users</span>
             </router-link>
             
@@ -371,7 +365,7 @@
               to="/admin/categories" 
               class="management-item"
             >
-              <i class="material-icons">category</i>
+              <Grid3X3 class="management-icon" />
               <span>Categories</span>
             </router-link>
           </div>
@@ -392,6 +386,38 @@ import { formatDate, formatStatus } from '@/utils/formatters'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/vi'
+
+// Lucide Icons
+import {
+  RefreshCw,
+  Users,
+  Package,
+  ShoppingCart,
+  DollarSign,
+  TrendingUp,
+  Minus,
+  Bell,
+  BellOff,
+  BellPlus,
+  CheckCircle,
+  Clock,
+  Globe,
+  Send,
+  Settings,
+  BarChart3,
+  History,
+  Receipt,
+  Star,
+  LayoutDashboard,
+  Package2,
+  Grid3X3,
+  Sparkles,
+  TrendingDown,
+  ShoppingBag,
+  Tag,
+  MessageSquare,
+  AlertTriangle
+} from 'lucide-vue-next'
 
 dayjs.extend(relativeTime)
 dayjs.locale('vi')
@@ -472,15 +498,15 @@ const refreshDashboard = async () => {
 
 const getNotificationIcon = (type) => {
   const icons = {
-    NEW_PRODUCT: 'new_releases',
-    PRICE_DROP: 'trending_down',
-    ORDER_UPDATE: 'shopping_bag',
-    SYSTEM_UPDATE: 'system_update',
-    PROMOTION: 'local_offer',
-    REVIEW_REMINDER: 'rate_review',
-    STOCK_ALERT: 'warning',
+    NEW_PRODUCT: 'Sparkles',
+    PRICE_DROP: 'TrendingDown',
+    ORDER_UPDATE: 'ShoppingBag',
+    SYSTEM_UPDATE: 'RefreshCw',
+    PROMOTION: 'Tag',
+    REVIEW_REMINDER: 'MessageSquare',
+    STOCK_ALERT: 'AlertTriangle',
   }
-  return icons[type] || 'notifications'
+  return icons[type] || 'Bell'
 }
 
 const getNotificationIconClass = (type) => {
@@ -572,7 +598,7 @@ const createRevenueChart = () => {
         y: {
           beginAtZero: true,
           ticks: {
-            callback: (value) => `$${value}`
+            callback: (value) => `${value}`
           },
           grid: {
             color: 'rgba(0,0,0,0.1)'
@@ -612,6 +638,12 @@ onMounted(async () => {
     color: #2c3e50;
     font-weight: 600;
   }
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
 }
 
 .stats-grid {
@@ -688,14 +720,15 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   
-  i {
-    font-size: 28px;
+  .stat-icon-svg {
+    width: 28px;
+    height: 28px;
   }
   
   .stat-card.blue & {
     background: rgba(25, 118, 210, 0.1);
     
-    i {
+    .stat-icon-svg {
       color: #1976d2;
     }
   }
@@ -703,7 +736,7 @@ onMounted(async () => {
   .stat-card.green & {
     background: rgba(56, 142, 60, 0.1);
     
-    i {
+    .stat-icon-svg {
       color: #388e3c;
     }
   }
@@ -711,7 +744,7 @@ onMounted(async () => {
   .stat-card.orange & {
     background: rgba(245, 124, 0, 0.1);
     
-    i {
+    .stat-icon-svg {
       color: #f57c00;
     }
   }
@@ -719,7 +752,7 @@ onMounted(async () => {
   .stat-card.purple & {
     background: rgba(123, 31, 162, 0.1);
     
-    i {
+    .stat-icon-svg {
       color: #7b1fa2;
     }
   }
@@ -758,8 +791,9 @@ onMounted(async () => {
     color: #6c757d;
   }
   
-  i {
-    font-size: 16px;
+  .trend-icon {
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -785,9 +819,10 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   
-  i {
+  .section-icon {
     color: #1976d2;
-    font-size: 24px;
+    width: 24px;
+    height: 24px;
   }
   
   h5, h6 {
@@ -842,8 +877,9 @@ onMounted(async () => {
       color: #7b1fa2;
     }
     
-    i {
-      font-size: 20px;
+    .mini-stat-icon-svg {
+      width: 20px;
+      height: 20px;
     }
   }
   
@@ -916,8 +952,9 @@ onMounted(async () => {
     }
   }
   
-  i {
-    font-size: 18px;
+  .action-icon {
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -979,8 +1016,9 @@ onMounted(async () => {
     color: #dc3545;
   }
   
-  i {
-    font-size: 20px;
+  .notification-type-icon {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -1234,8 +1272,9 @@ onMounted(async () => {
     color: #1976d2;
   }
   
-  i {
-    font-size: 32px;
+  .management-icon {
+    width: 32px;
+    height: 32px;
     color: #1976d2;
   }
   
@@ -1250,10 +1289,10 @@ onMounted(async () => {
   padding: 40px 20px;
   color: #6c757d;
   
-  i {
-    font-size: 48px;
-    margin-bottom: 12px;
-    display: block;
+  .empty-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 12px;
     opacity: 0.5;
   }
   
@@ -1362,42 +1401,6 @@ onMounted(async () => {
   .notification-meta {
     flex-direction: column;
     gap: 4px;
-  }
-}
-
-// Dark mode support (optional)
-@media (prefers-color-scheme: dark) {
-  .admin-dashboard {
-    background: #1a1a1a;
-  }
-  
-  .section-card,
-  .stat-card {
-    background: #2d2d2d;
-    color: #e0e0e0;
-  }
-  
-  .stat-number,
-  .section-title h5,
-  .section-title h6 {
-    color: #ffffff;
-  }
-  
-  .notification-title,
-  .customer-name,
-  .product-name {
-    color: #ffffff;
-  }
-  
-  .orders-table {
-    th {
-      background: #3a3a3a;
-      color: #ffffff;
-    }
-    
-    tr:hover {
-      background: #3a3a3a;
-    }
   }
 }
 

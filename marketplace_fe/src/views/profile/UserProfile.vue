@@ -11,17 +11,6 @@
               <p>Manage your account settings and preferences</p>
             </div>
           </div>
-          
-          <div class="header-actions">
-            <button 
-              class="btn-flat waves-effect"
-              @click="refreshProfile"
-              :disabled="refreshing"
-            >
-              <i class="material-icons" :class="{ 'spinning': refreshing }">refresh</i>
-              {{ refreshing ? 'Refreshing...' : 'Refresh' }}
-            </button>
-          </div>
         </div>
       </div>
 

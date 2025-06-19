@@ -8,11 +8,13 @@
     </div>
     
     <div v-else-if="error" class="error">
+      <AlertCircle class="error-icon" />
       <p>Error loading reviews: {{ error }}</p>
       <button @click="loadReviews" class="btn btn-primary">Try Again</button>
     </div>
     
     <div v-else-if="reviews.length === 0" class="no-reviews">
+      <MessageSquare class="empty-icon" />
       <p>You haven't written any reviews yet</p>
     </div>
     
@@ -27,7 +29,12 @@
           <div class="product-details">
             <h5>{{ review.product.name }}</h5>
             <div class="rating">
-              <span v-for="i in 5" :key="i" class="star" :class="{ active: i <= review.rating }">★</span>
+              <Star 
+                v-for="i in 5" 
+                :key="i" 
+                class="star" 
+                :class="{ active: i <= review.rating }"
+              />
               <span class="rating-text">{{ review.rating }}/5</span>
             </div>
           </div>
@@ -41,9 +48,11 @@
         
         <div class="review-actions">
           <button @click="editReview(review)" class="btn btn-outline-primary btn-sm">
+            <Edit class="btn-icon" />
             Edit
           </button>
           <button @click="deleteReview(review.id)" class="btn btn-outline-danger btn-sm">
+            <Trash2 class="btn-icon" />
             Delete
           </button>
         </div>
@@ -53,18 +62,21 @@
     <!-- Edit Review Modal -->
     <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
       <div class="modal-content" @click.stop>
-        <h5>Edit Review</h5>
+        <h5>
+          <Edit class="modal-icon" />
+          Edit Review
+        </h5>
         <form @submit.prevent="updateReview">
           <div class="form-group">
             <label>Rating</label>
             <div class="rating-input">
-              <span 
+              <Star 
                 v-for="i in 5" 
                 :key="i" 
                 class="star clickable" 
                 :class="{ active: i <= editingReview.rating }"
                 @click="editingReview.rating = i"
-              >★</span>
+              />
             </div>
           </div>
           
@@ -79,8 +91,13 @@
           </div>
           
           <div class="modal-actions">
-            <button type="button" @click="closeEditModal" class="btn btn-secondary">Cancel</button>
+            <button type="button" @click="closeEditModal" class="btn btn-secondary">
+              <X class="btn-icon" />
+              Cancel
+            </button>
             <button type="submit" class="btn btn-primary" :disabled="updatingReview">
+              <Save v-if="!updatingReview" class="btn-icon" />
+              <Loader v-else class="btn-icon spinning" />
               {{ updatingReview ? 'Updating...' : 'Update Review' }}
             </button>
           </div>
@@ -90,118 +107,122 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, onMounted } from 'vue'
 import reviewService from '@/services/review.service'
 import { getStaticUrl } from '@/services/api'
 
-export default {
-  name: 'MyReviews',
-  data() {
-    return {
-      reviews: [],
-      loading: false,
-      error: null,
-      showEditModal: false,
-      editingReview: null,
-      updatingReview: false
-    }
-  },
+// Lucide Icons
+import {
+  AlertCircle,
+  MessageSquare,
+  Star,
+  Edit,
+  Trash2,
+  X,
+  Save,
+  Loader
+} from 'lucide-vue-next'
+
+const reviews = ref([])
+const loading = ref(false)
+const error = ref(null)
+const showEditModal = ref(false)
+const editingReview = ref(null)
+const updatingReview = ref(false)
+
+const loadReviews = async () => {
+  loading.value = true
+  error.value = null
   
-  async mounted() {
-    await this.loadReviews()
-  },
-  
-  methods: {
-    async loadReviews() {
-      this.loading = true
-      this.error = null
-      
-      try {
-        const response = await reviewService.getMyReviews()
-        this.reviews = response.data
-      } catch (error) {
-        console.error('Error loading reviews:', error)
-        this.error = error.response?.data?.message || 'Failed to load reviews'
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    getProductImage(product) {
-      if (product.images && product.images.length > 0) {
-        return getStaticUrl(product.images[0])
-      }
-      return '/placeholder-product.jpg'
-    },
-    
-    formatDate(dateString) {
-      return new Date(dateString).toLocaleDateString('vi-VN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    },
-    
-    editReview(review) {
-      this.editingReview = {
-        id: review.id,
-        rating: review.rating,
-        comment: review.comment || ''
-      }
-      this.showEditModal = true
-    },
-    
-    closeEditModal() {
-      this.showEditModal = false
-      this.editingReview = null
-    },
-    
-    async updateReview() {
-      if (!this.editingReview.rating) {
-        alert('Please select a rating')
-        return
-      }
-      
-      this.updatingReview = true
-      
-      try {
-        const response = await reviewService.updateReview(this.editingReview.id, {
-          rating: this.editingReview.rating,
-          comment: this.editingReview.comment
-        })
-        
-        // Update the review in the list
-        const index = this.reviews.findIndex(r => r.id === this.editingReview.id)
-        if (index !== -1) {
-          this.reviews[index] = { ...this.reviews[index], ...response.data }
-        }
-        
-        this.closeEditModal()
-        alert('Review updated successfully!')
-      } catch (error) {
-        console.error('Error updating review:', error)
-        alert(error.response?.data?.message || 'Failed to update review')
-      } finally {
-        this.updatingReview = false
-      }
-    },
-    
-    async deleteReview(reviewId) {
-      if (!confirm('Are you sure you want to delete this review?')) {
-        return
-      }
-      
-      try {
-        await reviewService.deleteReview(reviewId)
-        this.reviews = this.reviews.filter(r => r.id !== reviewId)
-        alert('Review deleted successfully!')
-      } catch (error) {
-        console.error('Error deleting review:', error)
-        alert(error.response?.data?.message || 'Failed to delete review')
-      }
-    }
+  try {
+    const response = await reviewService.getMyReviews()
+    reviews.value = response.data
+  } catch (err) {
+    console.error('Error loading reviews:', err)
+    error.value = err.response?.data?.message || 'Failed to load reviews'
+  } finally {
+    loading.value = false
   }
 }
+
+const getProductImage = (product) => {
+  if (product.images && product.images.length > 0) {
+    return getStaticUrl(product.images[0])
+  }
+  return '/placeholder-product.jpg'
+}
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('vi-VN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+const editReview = (review) => {
+  editingReview.value = {
+    id: review.id,
+    rating: review.rating,
+    comment: review.comment || ''
+  }
+  showEditModal.value = true
+}
+
+const closeEditModal = () => {
+  showEditModal.value = false
+  editingReview.value = null
+}
+
+const updateReview = async () => {
+  if (!editingReview.value.rating) {
+    alert('Please select a rating')
+    return
+  }
+  
+  updatingReview.value = true
+  
+  try {
+    const response = await reviewService.updateReview(editingReview.value.id, {
+      rating: editingReview.value.rating,
+      comment: editingReview.value.comment
+    })
+    
+    // Update the review in the list
+    const index = reviews.value.findIndex(r => r.id === editingReview.value.id)
+    if (index !== -1) {
+      reviews.value[index] = { ...reviews.value[index], ...response.data }
+    }
+    
+    closeEditModal()
+    alert('Review updated successfully!')
+  } catch (err) {
+    console.error('Error updating review:', err)
+    alert(err.response?.data?.message || 'Failed to update review')
+  } finally {
+    updatingReview.value = false
+  }
+}
+
+const deleteReview = async (reviewId) => {
+  if (!confirm('Are you sure you want to delete this review?')) {
+    return
+  }
+  
+  try {
+    await reviewService.deleteReview(reviewId)
+    reviews.value = reviews.value.filter(r => r.id !== reviewId)
+    alert('Review deleted successfully!')
+  } catch (err) {
+    console.error('Error deleting review:', err)
+    alert(err.response?.data?.message || 'Failed to delete review')
+  }
+}
+
+onMounted(() => {
+  loadReviews()
+})
 </script>
 
 <style scoped>
@@ -211,14 +232,49 @@ export default {
   padding: 20px;
 }
 
-.loading, .error, .no-reviews {
+.error-icon,
+.empty-icon,
+.modal-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading, 
+.error, 
+.no-reviews {
   text-align: center;
   padding: 40px 20px;
   color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
 .error {
   color: #dc3545;
+}
+
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  color: #ccc;
 }
 
 .reviews-list {
@@ -259,22 +315,33 @@ export default {
 .rating {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 2px;
 }
 
 .star {
+  width: 16px;
+  height: 16px;
   color: #ddd;
-  font-size: 16px;
+  cursor: default;
 }
 
 .star.active {
   color: #ffc107;
 }
 
+.star.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.star.clickable:hover {
+  color: #ffc107;
+}
+
 .rating-text {
   font-size: 14px;
   color: #666;
-  margin-left: 5px;
+  margin-left: 8px;
 }
 
 .review-content {
@@ -309,7 +376,9 @@ export default {
   cursor: pointer;
   font-size: 12px;
   text-decoration: none;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
 }
 
 .btn-outline-primary {
@@ -340,10 +409,18 @@ export default {
   border-color: #007bff;
 }
 
+.btn-primary:hover {
+  background: #0056b3;
+}
+
 .btn-secondary {
   background: #6c757d;
   color: white;
   border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+  background: #545b62;
 }
 
 /* Modal Styles */
@@ -372,6 +449,8 @@ export default {
 
 .modal-content h5 {
   margin-bottom: 20px;
+  display: flex;
+  align-items: center;
 }
 
 .form-group {
@@ -390,22 +469,13 @@ export default {
   margin-bottom: 10px;
 }
 
-.star.clickable {
-  cursor: pointer;
-  font-size: 20px;
-  transition: color 0.2s;
-}
-
-.star.clickable:hover {
-  color: #ffc107;
-}
-
 .form-control {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  resize: vertical;
 }
 
 .modal-actions {
@@ -432,6 +502,7 @@ export default {
   
   .product-image {
     margin-bottom: 10px;
+    margin-right: 0;
   }
   
   .review-actions {
@@ -441,6 +512,10 @@ export default {
   .modal-content {
     margin: 20px;
     padding: 20px;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
   }
 }
 </style>

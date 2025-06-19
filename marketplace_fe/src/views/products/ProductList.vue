@@ -109,6 +109,7 @@ const filters = ref({
   minRating: null
 })
 
+// Trong ProductList.vue, sửa lại fetchProducts
 const fetchProducts = async () => {
   loading.value = true
   
@@ -116,15 +117,30 @@ const fetchProducts = async () => {
     const params = {
       page: currentPage.value,
       limit: 12,
-      ...filters.value,
-      ...(sortBy.value && { sort: sortBy.value })
+      ...filters.value
     }
+    
+    // Loại bỏ các giá trị null/undefined
+    Object.keys(params).forEach(key => {
+      if (params[key] === null || params[key] === undefined || params[key] === '') {
+        delete params[key]
+      }
+    })
+    
+    // Thêm sort nếu có
+    if (sortBy.value) {
+      params.sort = sortBy.value
+    }
+    
+    console.log('API params:', params) // Debug
     
     const response = await productService.getProducts(params)
     products.value = response.data.data
     totalPages.value = response.data.meta.totalPages
   } catch (error) {
     console.error('Error fetching products:', error)
+    // Hiển thị thông báo lỗi cho user
+    products.value = []
   } finally {
     loading.value = false
   }

@@ -2,70 +2,64 @@
   <nav class="nav-extended optimized-navbar">
     <div class="nav-wrapper">
       <div class="container">
-        <!-- ✅ FIX: Logo với z-index cao hơn -->
+        <!-- Logo với z-index cao hơn -->
         <router-link to="/" class="brand-logo">
-          <i class="material-icons">shopping_cart</i>
+          <ShoppingCart class="brand-icon" />
           <span class="brand-text">Marketplace</span>
         </router-link>
-        
+
         <a href="#" data-target="mobile-nav" class="sidenav-trigger">
-          <i class="material-icons">menu</i>
+          <Menu class="menu-icon" />
         </a>
-        
+
         <ul class="right hide-on-med-and-down navbar-items">
           <!-- Products Link -->
           <li class="nav-item">
             <router-link to="/products" class="nav-link">
-              <i class="material-icons">store</i>
+              <Store class="nav-icon" />
               <span>Products</span>
             </router-link>
           </li>
-          
+
           <template v-if="authStore.isAuthenticated">
             <!-- Notification Bell -->
             <li class="nav-item notification-item">
               <NotificationBell />
             </li>
-            
+
             <!-- Messages/Chat Link -->
             <li class="nav-item">
               <router-link to="/chat" class="nav-link chat-link">
-                <i class="material-icons">chat</i>
+                <MessageCircle class="nav-icon" />
                 <span>Messages</span>
                 <span v-if="totalUnreadCount > 0" class="nav-badge">
                   {{ totalUnreadCount > 99 ? '99+' : totalUnreadCount }}
                 </span>
               </router-link>
             </li>
-            
+
             <!-- Cart Link -->
             <li class="nav-item">
               <router-link to="/cart" class="nav-link cart-link">
-                <i class="material-icons">shopping_basket</i>
+                <ShoppingBasket class="nav-icon" />
                 <span>Cart</span>
-                <span v-if="cartCount > 0" class="nav-badge">
+                <span v-if="cartCount > 0" class="nav-badge" :class="{ 'large-count': cartCount > 99 }">
                   {{ cartCount > 99 ? '99+' : cartCount }}
                 </span>
               </router-link>
             </li>
-            
+
             <!-- User Dropdown -->
             <li class="nav-item user-dropdown-item">
-              <a 
-                class="dropdown-trigger nav-link user-trigger" 
-                href="#!" 
-                data-target="user-dropdown"
-                @click.prevent="handleDropdownClick"
-                :class="{ active: showDropdown }"
-                :aria-expanded="showDropdown"
-              >
-                <i class="material-icons user-icon">account_circle</i>
+              <a class="dropdown-trigger nav-link user-trigger" href="#!" data-target="user-dropdown"
+                @click.prevent="handleDropdownClick" :class="{ active: showDropdown }" :aria-expanded="showDropdown">
+                <UserCircle class="user-icon" />
                 <span class="user-name">{{ authStore.user?.name || 'User' }}</span>
-                <i class="material-icons dropdown-arrow">arrow_drop_down</i>
+                <ChevronDown class="dropdown-arrow" />
               </a>
             </li>
           </template>
-          
+
           <template v-else>
             <li class="nav-item">
               <router-link to="/login" class="nav-link">Login</router-link>
@@ -80,65 +74,61 @@
   </nav>
 
   <!-- User Dropdown -->
-  <ul 
-    id="user-dropdown" 
-    class="dropdown-content user-dropdown-menu" 
-    :class="{ show: showDropdown }"
-    v-show="authStore.isAuthenticated"
-  >
+  <ul id="user-dropdown" class="dropdown-content user-dropdown-menu" :class="{ show: showDropdown }"
+    v-show="authStore.isAuthenticated">
     <li class="dropdown-header">
       <div class="user-info">
-        <i class="material-icons user-avatar">account_circle</i>
+        <UserCircle class="user-avatar" />
         <div class="user-details">
           <span class="user-display-name">{{ authStore.user?.name }}</span>
           <span class="user-email">{{ authStore.user?.email }}</span>
         </div>
       </div>
     </li>
-    
+
     <li class="divider"></li>
-    
+
     <li><a href="#!" @click.prevent="navigateTo('/profile')" class="dropdown-link">
-      <i class="material-icons">person</i>My Profile
-    </a></li>
-    
+        <User class="dropdown-icon" />My Profile
+      </a></li>
+
     <li><a href="#!" @click.prevent="navigateTo('/my-products')" class="dropdown-link">
-      <i class="material-icons">inventory</i>My Products
-    </a></li>
-    
+        <Package class="dropdown-icon" />My Products
+      </a></li>
+
     <li><a href="#!" @click.prevent="navigateTo('/orders')" class="dropdown-link">
-      <i class="material-icons">receipt</i>My Orders
-    </a></li>
-    
+        <Receipt class="dropdown-icon" />My Orders
+      </a></li>
+
     <li><a href="#!" @click.prevent="navigateTo('/my-reviews')" class="dropdown-link">
-      <i class="material-icons">rate_review</i>My Reviews
-    </a></li>
-    
+        <MessageSquare class="dropdown-icon" />My Reviews
+      </a></li>
+
     <li><a href="#!" @click.prevent="navigateTo('/notifications')" class="dropdown-link">
-      <i class="material-icons">notifications</i>My Notifications
-      <span v-if="notificationUnreadCount > 0" class="dropdown-badge">
-        {{ notificationUnreadCount }}
-      </span>
-    </a></li>
-    
+        <Bell class="dropdown-icon" />My Notifications
+        <span v-if="notificationUnreadCount > 0" class="dropdown-badge">
+          {{ notificationUnreadCount }}
+        </span>
+      </a></li>
+
     <li><a href="#!" @click.prevent="navigateTo('/chat')" class="dropdown-link">
-      <i class="material-icons">chat</i>My Messages
-      <span v-if="totalUnreadCount > 0" class="dropdown-badge">
-        {{ totalUnreadCount }}
-      </span>
-    </a></li>
-    
+        <MessageCircle class="dropdown-icon" />My Messages
+        <span v-if="totalUnreadCount > 0" class="dropdown-badge">
+          {{ totalUnreadCount }}
+        </span>
+      </a></li>
+
     <li v-if="authStore.isAdmin" class="divider"></li>
     <li v-if="authStore.isAdmin">
       <a href="#!" @click.prevent="navigateTo('/admin/dashboard')" class="dropdown-link admin-link">
-        <i class="material-icons">admin_panel_settings</i>Admin Dashboard
+        <Shield class="dropdown-icon" />Admin Dashboard
       </a>
     </li>
-    
+
     <li class="divider"></li>
     <li>
       <a href="#!" @click.prevent="logout" class="dropdown-link logout-link">
-        <i class="material-icons">logout</i>Logout
+        <LogOut class="dropdown-icon" />Logout
       </a>
     </li>
   </ul>
@@ -147,86 +137,82 @@
   <ul class="sidenav mobile-nav" id="mobile-nav">
     <li class="mobile-header">
       <div class="mobile-user-info" v-if="authStore.isAuthenticated">
-        <i class="material-icons mobile-avatar">account_circle</i>
+        <UserCircle class="mobile-avatar" />
         <div class="mobile-user-details">
           <span class="mobile-user-name">{{ authStore.user?.name }}</span>
           <span class="mobile-user-email">{{ authStore.user?.email }}</span>
         </div>
       </div>
       <div v-else class="mobile-guest-info">
-        <i class="material-icons">person_outline</i>
+        <UserX class="mobile-guest-icon" />
         <span>Guest User</span>
       </div>
     </li>
-    
+
     <li class="mobile-divider"></li>
-    
+
     <li><router-link to="/products" class="mobile-link">
-      <i class="material-icons">store</i>Products
-    </router-link></li>
-    
+        <Store class="mobile-icon" />Products
+      </router-link></li>
+
     <template v-if="authStore.isAuthenticated">
       <li>
         <router-link to="/notifications" class="mobile-link mobile-notification-link">
-          <i class="material-icons">notifications</i>
+          <Bell class="mobile-icon" />
           <span>Notifications</span>
           <span v-if="notificationUnreadCount > 0" class="mobile-badge">
             {{ notificationUnreadCount }}
           </span>
         </router-link>
       </li>
-      
+
       <li>
         <router-link to="/chat" class="mobile-link mobile-chat-link">
-          <i class="material-icons">chat</i>
+          <MessageCircle class="mobile-icon" />
           <span>Messages</span>
           <span v-if="totalUnreadCount > 0" class="mobile-badge">
             {{ totalUnreadCount }}
           </span>
         </router-link>
       </li>
-      
+
       <li><router-link to="/cart" class="mobile-link">
-        <i class="material-icons">shopping_basket</i>Cart ({{ cartCount }})
-      </router-link></li>
-      
+          <ShoppingBasket class="mobile-icon" />Cart ({{ cartCount }})
+        </router-link></li>
+
       <li class="mobile-divider"></li>
-      
+
       <li><router-link to="/profile" class="mobile-link">
-        <i class="material-icons">person</i>Profile
-      </router-link></li>
-      
+          <User class="mobile-icon" />Profile
+        </router-link></li>
+
       <li><router-link to="/orders" class="mobile-link">
-        <i class="material-icons">receipt</i>Orders
-      </router-link></li>
-      
+          <Receipt class="mobile-icon" />Orders
+        </router-link></li>
+
       <li v-if="authStore.isAdmin"><router-link to="/admin/dashboard" class="mobile-link admin-mobile-link">
-        <i class="material-icons">admin_panel_settings</i>Admin Dashboard
-      </router-link></li>
-      
+          <Shield class="mobile-icon" />Admin Dashboard
+        </router-link></li>
+
       <li class="mobile-divider"></li>
-      
+
       <li><a @click="logout" class="mobile-link logout-mobile-link">
-        <i class="material-icons">logout</i>Logout
-      </a></li>
+          <LogOut class="mobile-icon" />Logout
+        </a></li>
     </template>
-    
+
     <template v-else>
       <li><router-link to="/login" class="mobile-link">
-        <i class="material-icons">login</i>Login
-      </router-link></li>
+          <LogIn class="mobile-icon" />Login
+        </router-link></li>
       <li><router-link to="/register" class="mobile-link">
-        <i class="material-icons">person_add</i>Register
-      </router-link></li>
+          <UserPlus class="mobile-icon" />Register
+        </router-link></li>
     </template>
   </ul>
 
   <!-- Click outside overlay -->
-  <div 
-    v-if="showDropdown" 
-    class="dropdown-overlay"
-    @click="closeDropdown"
-  ></div>
+  <div v-if="showDropdown" class="dropdown-overlay" @click="closeDropdown"></div>
 
   <!-- Chat Notification Toast -->
   <div v-if="showChatNotification" class="chat-notification-toast" @click="goToChat">
@@ -237,7 +223,7 @@
         <p>{{ notificationMessage }}</p>
       </div>
       <button @click.stop="hideChatNotification" class="toast-close">
-        <i class="material-icons">close</i>
+        <X class="toast-close-icon" />
       </button>
     </div>
   </div>
@@ -253,6 +239,28 @@ import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notification'
 import NotificationBell from './NotificationBell.vue'
 import socketService from '@/services/socket.service'
+
+// Lucide Icons
+import {
+  ShoppingCart,
+  Menu,
+  Store,
+  MessageCircle,
+  ShoppingBasket,
+  UserCircle,
+  ChevronDown,
+  User,
+  Package,
+  Receipt,
+  MessageSquare,
+  Bell,
+  Shield,
+  LogOut,
+  UserX,
+  LogIn,
+  UserPlus,
+  X
+} from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const cartStore = useCartStore()
@@ -281,8 +289,6 @@ let sidenavInstance = null
 
 // Methods
 const handleDropdownClick = () => {
-  console.log('🖱️ Dropdown click - Current state:', showDropdown.value)
-  
   if (dropdownInstance) {
     try {
       if (dropdownInstance.isOpen) {
@@ -292,19 +298,16 @@ const handleDropdownClick = () => {
         dropdownInstance.open()
         showDropdown.value = true
       }
-      console.log('✅ Materialize dropdown toggled')
       return
     } catch (error) {
-      console.warn('⚠️ Materialize dropdown failed:', error)
+      console.warn('Materialize dropdown failed:', error)
     }
   }
-  
-  console.log('🔄 Using manual dropdown control')
+
   showDropdown.value = !showDropdown.value
 }
 
 const closeDropdown = () => {
-  console.log('❌ Closing dropdown')
   showDropdown.value = false
   if (dropdownInstance && dropdownInstance.isOpen) {
     dropdownInstance.close()
@@ -312,19 +315,17 @@ const closeDropdown = () => {
 }
 
 const navigateTo = (path) => {
-  console.log('🔄 Navigating to:', path)
   closeDropdown()
   router.push(path)
 }
 
 const logout = async () => {
-  console.log('🚪 Logging out...')
   closeDropdown()
-  
+
   socketService.disconnect()
   notificationStore.disconnectSocket()
   notificationStore.clearNotifications()
-  
+
   await authStore.logout()
   setTimeout(initializeMaterialize, 300)
 }
@@ -332,12 +333,12 @@ const logout = async () => {
 // Chat notification methods
 const showNewMessageNotification = (data) => {
   if (route.path.includes('/chat')) return
-  
+
   notificationSender.value = data.senderName || 'Someone'
   notificationMessage.value = data.message?.content || 'Sent you a message'
   notificationAvatar.value = data.senderAvatar || '/placeholder-avatar.svg'
   showChatNotification.value = true
-  
+
   if (notificationTimeout.value) {
     clearTimeout(notificationTimeout.value)
   }
@@ -366,24 +367,23 @@ const handleAvatarError = (event) => {
 // Setup functions
 const setupNotifications = () => {
   if (!authStore.isAuthenticated) return
-  
+
   notificationStore.connectSocket(authStore.token)
   notificationStore.fetchUnreadCount()
 }
 
 const setupChatNotifications = () => {
   if (!authStore.isAuthenticated) return
-  
+
   socketService.connect()
-  
+
   socketService.onNewChatNotification((data) => {
-    console.log('🔔 New chat notification:', data)
     showNewMessageNotification({
       senderName: data.senderName,
       message: data.message,
       senderAvatar: data.senderAvatar
     })
-    
+
     chatStore.fetchChats()
   })
 }
@@ -431,10 +431,9 @@ const initializeMaterialize = () => {
               showDropdown.value = false
             }
           })
-          console.log('✅ Dropdown initialized')
         }
       }
-      
+
       const sidenavElem = document.querySelector('.sidenav')
       if (sidenavElem) {
         sidenavInstance = M.Sidenav.init(sidenavElem)
@@ -451,7 +450,7 @@ watch(() => authStore.isAuthenticated, async (newVal, oldVal) => {
     showDropdown.value = false
     await nextTick()
     setTimeout(initializeMaterialize, 300)
-    
+
     if (newVal) {
       setTimeout(() => {
         setupNotifications()
@@ -488,13 +487,13 @@ const handleEscape = (event) => {
 
 onMounted(async () => {
   await nextTick()
-  
+
   document.addEventListener('keydown', handleEscape)
-  
+
   await categoryStore.fetchCategories()
   if (authStore.isAuthenticated) {
     await cartStore.fetchCart()
-    
+
     try {
       await chatStore.fetchChats()
       setTimeout(() => {
@@ -505,204 +504,122 @@ onMounted(async () => {
       console.error('Error loading chat/notification data:', error)
     }
   }
-  
+
   setTimeout(initializeMaterialize, 100)
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleEscape)
   destroyInstances()
-  
+
   if (notificationTimeout.value) {
     clearTimeout(notificationTimeout.value)
   }
-  
+
   notificationStore.disconnectSocket()
 })
 </script>
 
 <style scoped lang="scss">
-// ✅ FIXED NAVBAR STYLES WITH PROPER Z-INDEX
+// FIXED NAVBAR STYLES WITH PROPER Z-INDEX
+// Fixed CSS for navigation badge positioning
 .optimized-navbar {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  position: relative;
-  z-index: 1000; // ✅ FIX: Ensure navbar has proper z-index
-  
-  .nav-wrapper {
-    position: relative;
-    z-index: 1001; // ✅ FIX: Nav wrapper z-index
-    
-    .container {
-      display: flex;
-      align-items: center;
-      height: 64px;
-      position: relative;
-    }
-  }
-  
-  // ✅ FIX: Logo với z-index cao và positioning đúng
-  .brand-logo {
-    display: flex;
-    align-items: center;
-    font-weight: 600;
-    font-size: 1.4rem;
-    transition: all 0.3s ease;
-    position: relative;
-    z-index: 1050; // ✅ FIX: Logo z-index cao nhất
-    color: white !important;
-    text-decoration: none;
-    
-    &:hover {
-      transform: scale(1.02);
-      color: rgba(255, 255, 255, 0.9) !important;
-    }
-    
-    i {
-      margin-right: 8px;
-      font-size: 28px;
-    }
-    
-    .brand-text {
-      @media (max-width: 600px) {
-        display: none;
-      }
-    }
-  }
-  
   .navbar-items {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    margin: 0;
-    position: relative;
-    z-index: 1000; // ✅ FIX: Navbar items z-index
-    
     .nav-item {
-      display: flex;
-      align-items: center;
-      height: 100%;
-      margin: 0 2px;
-      
-      &.notification-item {
-        margin: 0 4px;
-        position: relative;
-        z-index: 900; // ✅ FIX: Notification item z-index thấp hơn logo
-      }
-      
-      &.user-dropdown-item {
-        margin-left: 8px;
-      }
-    }
-    
-    .nav-link {
-      display: flex;
-      align-items: center;
-      height: 100%;
-      padding: 0 16px;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      transition: all 0.3s ease;
-      position: relative;
-      font-weight: 500;
-      
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        transform: translateY(-1px);
-        color: white;
-      }
-      
-      &.router-link-active {
-        background-color: rgba(255, 255, 255, 0.15);
-        
-        &::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 20px;
-          height: 2px;
-          background: white;
-          border-radius: 1px;
-        }
-      }
-      
-      i {
-        margin-right: 6px;
-        font-size: 20px;
-      }
-      
-      span {
-        font-size: 14px;
-        
-        @media (max-width: 768px) {
-          display: none;
+      position: relative; // Quan trọng: đảm bảo nav-item có relative positioning
+
+      .nav-link {
+        position: relative; // Đảm bảo nav-link cũng có relative positioning
+
+        // Cart và Messages links cần special handling
+        &.cart-link,
+        &.chat-link {
+          .nav-badge {
+            position: absolute;
+            top: 4px; // Điều chỉnh từ 8px xuống 4px
+            right: 4px; // Điều chỉnh từ 8px xuống 4px
+            background: #f44336;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: 600;
+            min-width: 16px;
+            height: 16px; // Thêm height cố định
+            text-align: center;
+            border: 2px solid white;
+            line-height: 12px; // Thêm line-height để center text
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10; // Đảm bảo badge luôn ở trên
+            animation: badgeBounce 0.3s ease-out;
+
+            // Đảm bảo text không bị wrap
+            white-space: nowrap;
+            overflow: hidden;
+
+            // Fix cho số lớn
+            &.large-count {
+              padding: 1px 4px;
+              font-size: 9px;
+              min-width: 18px;
+              height: 14px;
+              line-height: 12px;
+            }
+          }
         }
       }
     }
-    
-    .user-trigger {
-      padding: 0 12px;
-      min-width: 140px;
-      justify-content: space-between;
-      
-      &.active {
-        background-color: rgba(255, 255, 255, 0.15);
-      }
-      
-      .user-icon {
-        margin-right: 8px;
-        font-size: 24px;
-      }
-      
-      .user-name {
-        flex: 1;
-        text-align: left;
-        max-width: 80px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      
-      .dropdown-arrow {
-        margin-left: 4px;
-        margin-right: 0;
-        font-size: 18px;
-        transition: transform 0.3s ease;
-      }
-      
-      &.active .dropdown-arrow {
-        transform: rotate(180deg);
-      }
-    }
-  }
-  
-  .nav-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: #f44336;
-    color: white;
-    border-radius: 10px;
-    padding: 2px 6px;
-    font-size: 10px;
-    font-weight: 600;
-    min-width: 16px;
-    text-align: center;
-    border: 2px solid white;
-    animation: badgeBounce 0.3s ease-out;
-  }
-  
-  // ✅ FIX: Sidenav trigger positioning
-  .sidenav-trigger {
-    position: relative;
-    z-index: 1002;
   }
 }
 
-// ✅ FIX: User dropdown z-index
+// Mobile badge positioning
+@media (max-width: 768px) {
+  .optimized-navbar {
+    .navbar-items {
+      .nav-link {
+
+        &.cart-link,
+        &.chat-link {
+          .nav-badge {
+            top: 2px;
+            right: 2px;
+            font-size: 9px;
+            padding: 1px 4px;
+            min-width: 14px;
+            height: 14px;
+            line-height: 12px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Mobile navigation badge fix
+.mobile-nav {
+  .mobile-link {
+    .mobile-badge {
+      margin-left: auto;
+      background: #f44336;
+      color: white;
+      border-radius: 8px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 600;
+      min-width: 16px;
+      height: 16px;
+      text-align: center;
+      line-height: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+// User dropdown z-index
 .user-dropdown-menu {
   min-width: 280px;
   border-radius: 12px;
@@ -710,34 +627,35 @@ onUnmounted(() => {
   border: 1px solid #e0e0e0;
   overflow: hidden;
   position: relative;
-  z-index: 950; // ✅ FIX: Dropdown z-index thấp hơn logo
-  
+  z-index: 950;
+
   .dropdown-header {
     padding: 16px 20px;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     border-bottom: 1px solid #dee2e6;
-    
+
     .user-info {
       display: flex;
       align-items: center;
       gap: 12px;
-      
+
       .user-avatar {
-        font-size: 36px;
+        width: 36px;
+        height: 36px;
         color: #6c757d;
       }
-      
+
       .user-details {
         display: flex;
         flex-direction: column;
-        
+
         .user-display-name {
           font-weight: 600;
           color: #333;
           font-size: 16px;
           margin-bottom: 2px;
         }
-        
+
         .user-email {
           color: #6c757d;
           font-size: 12px;
@@ -745,7 +663,7 @@ onUnmounted(() => {
       }
     }
   }
-  
+
   .dropdown-link {
     display: flex;
     align-items: center;
@@ -754,20 +672,19 @@ onUnmounted(() => {
     text-decoration: none;
     transition: all 0.2s ease;
     position: relative;
-    
+
     &:hover {
       background: #f8f9fa;
       color: #1976d2;
       transform: translateX(4px);
     }
-    
-    i {
+
+    .dropdown-icon {
       margin-right: 12px;
-      font-size: 18px;
       width: 18px;
-      text-align: center;
+      height: 18px;
     }
-    
+
     .dropdown-badge {
       margin-left: auto;
       background: #f44336;
@@ -779,26 +696,26 @@ onUnmounted(() => {
       min-width: 16px;
       text-align: center;
     }
-    
+
     &.admin-link {
       color: #ff9800;
-      
+
       &:hover {
         background: #fff3e0;
         color: #f57c00;
       }
     }
-    
+
     &.logout-link {
       color: #f44336;
-      
+
       &:hover {
         background: #ffebee;
         color: #d32f2f;
       }
     }
   }
-  
+
   .divider {
     height: 1px;
     background: #dee2e6;
@@ -806,36 +723,38 @@ onUnmounted(() => {
   }
 }
 
-// ✅ MOBILE NAVIGATION
+// MOBILE NAVIGATION
 .mobile-nav {
   width: 300px;
-  z-index: 1100; // ✅ FIX: Mobile nav z-index
-  
+  z-index: 1100;
+
   .mobile-header {
     padding: 20px;
     background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
     color: white;
-    
+
     .mobile-user-info,
     .mobile-guest-info {
       display: flex;
       align-items: center;
       gap: 12px;
-      
-      .mobile-avatar {
-        font-size: 32px;
+
+      .mobile-avatar,
+      .mobile-guest-icon {
+        width: 32px;
+        height: 32px;
       }
-      
+
       .mobile-user-details {
         display: flex;
         flex-direction: column;
-        
+
         .mobile-user-name {
           font-weight: 600;
           font-size: 16px;
           margin-bottom: 2px;
         }
-        
+
         .mobile-user-email {
           font-size: 12px;
           opacity: 0.8;
@@ -843,13 +762,13 @@ onUnmounted(() => {
       }
     }
   }
-  
+
   .mobile-divider {
     height: 1px;
     background: #dee2e6;
     margin: 8px 16px;
   }
-  
+
   .mobile-link {
     display: flex;
     align-items: center;
@@ -857,24 +776,23 @@ onUnmounted(() => {
     color: #333;
     text-decoration: none;
     transition: all 0.2s ease;
-    
+
     &:hover {
       background: #f8f9fa;
       color: #1976d2;
     }
-    
+
     &.router-link-active {
       background: #e3f2fd;
       color: #1976d2;
     }
-    
-    i {
+
+    .mobile-icon {
       margin-right: 12px;
-      font-size: 20px;
       width: 20px;
-      text-align: center;
+      height: 20px;
     }
-    
+
     .mobile-badge {
       margin-left: auto;
       background: #f44336;
@@ -886,69 +804,68 @@ onUnmounted(() => {
       min-width: 16px;
       text-align: center;
     }
-    
+
     &.admin-mobile-link {
       color: #ff9800;
     }
-    
+
     &.logout-mobile-link {
       color: #f44336;
     }
   }
 }
 
-// ✅ CHAT NOTIFICATION TOAST
-// ✅ CHAT NOTIFICATION TOAST - COMPACT VERSION
+// CHAT NOTIFICATION TOAST - COMPACT VERSION
 .chat-notification-toast {
   position: fixed;
   top: 80px;
   right: 20px;
   background: white;
-  border-radius: 8px; // Reduced from 12px
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); // Reduced shadow
-  padding: 10px; // Reduced from 16px
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 10px;
   z-index: 10000;
-  max-width: 260px; // Reduced from 320px
+  max-width: 260px;
   cursor: pointer;
   animation: slideInRight 0.4s ease;
-  border-left: 3px solid #1976d2; // Reduced from 4px
-  
+  border-left: 3px solid #1976d2;
+
   &:hover {
-    transform: translateX(-2px); // Reduced from -4px
+    transform: translateX(-2px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   }
-  
+
   .toast-content {
     display: flex;
     align-items: center;
-    gap: 8px; // Reduced from 12px
-    
+    gap: 8px;
+
     .toast-avatar {
-      width: 32px; // Reduced from 44px
-      height: 32px; // Reduced from 44px
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       object-fit: cover;
-      border: 1px solid #f0f0f0; // Reduced from 2px
+      border: 1px solid #f0f0f0;
     }
-    
+
     .toast-text {
       flex: 1;
-      
+
       strong {
         display: block;
-        font-size: 12px; // Reduced from 14px
+        font-size: 12px;
         color: #333;
-        margin-bottom: 2px; // Reduced from 4px
+        margin-bottom: 2px;
         font-weight: 600;
         line-height: 1.3;
       }
-      
+
       p {
         margin: 0;
-        font-size: 11px; // Reduced from 13px
+        font-size: 11px;
         color: #666;
-        line-height: 1.3; // Reduced from 1.4
-        max-height: 28px; // Reduced from 40px
+        line-height: 1.3;
+        max-height: 28px;
         overflow: hidden;
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -956,128 +873,133 @@ onUnmounted(() => {
         -webkit-box-orient: vertical;
       }
     }
-    
+
     .toast-close {
       background: none;
       border: none;
       cursor: pointer;
-      padding: 4px; // Reduced from 6px
+      padding: 4px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      min-width: 20px; // Add minimum width
-      
+      min-width: 20px;
+
       &:hover {
         background: #f0f0f0;
-        transform: scale(1.05); // Reduced from 1.1
+        transform: scale(1.05);
       }
-      
-      i {
-        font-size: 14px; // Reduced from 16px
+
+      .toast-close-icon {
+        width: 14px;
+        height: 14px;
         color: #999;
       }
     }
   }
 }
 
-// ✅ RESPONSIVE DESIGN - MOBILE COMPACT
+// RESPONSIVE DESIGN - MOBILE COMPACT
 @media (max-width: 992px) {
   .chat-notification-toast {
-    right: 12px; // Reduced from 16px
-    left: 12px; // Reduced from 16px
+    right: 12px;
+    left: 12px;
     max-width: none;
-    padding: 8px; // Even smaller on mobile
-    
+    padding: 8px;
+
     .toast-content {
-      gap: 6px; // Smaller gap on mobile
-      
+      gap: 6px;
+
       .toast-avatar {
-        width: 28px; // Even smaller on mobile
+        width: 28px;
         height: 28px;
       }
-      
+
       .toast-text {
         strong {
           font-size: 11px;
         }
-        
+
         p {
           font-size: 10px;
           max-height: 24px;
         }
       }
-      
+
       .toast-close {
         padding: 3px;
-        
-        i {
-          font-size: 12px;
+
+        .toast-close-icon {
+          width: 12px;
+          height: 12px;
         }
       }
     }
   }
 }
 
-// ✅ EXTRA COMPACT VERSION (Optional - if you want even smaller)
+// EXTRA COMPACT VERSION (Optional - if you want even smaller)
 .chat-notification-toast.compact {
   max-width: 220px;
   padding: 8px;
   border-radius: 6px;
-  
+
   .toast-content {
     gap: 6px;
-    
+
     .toast-avatar {
       width: 28px;
       height: 28px;
     }
-    
+
     .toast-text {
       strong {
         font-size: 11px;
         margin-bottom: 1px;
       }
-      
+
       p {
         font-size: 10px;
         max-height: 24px;
         line-height: 1.2;
       }
     }
-    
+
     .toast-close {
       padding: 3px;
-      
-      i {
-        font-size: 12px;
+
+      .toast-close-icon {
+        width: 12px;
+        height: 12px;
       }
     }
   }
 }
 
-// ✅ FIX: Dropdown overlay z-index
+// Dropdown overlay z-index
 .dropdown-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 949; // ✅ FIX: Overlay z-index thấp hơn dropdown
+  z-index: 949;
   background: transparent;
 }
 
-// ✅ ANIMATIONS
+// ANIMATIONS
 @keyframes badgeBounce {
   0% {
     transform: scale(0);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.1);
     opacity: 1;
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -1089,18 +1011,10 @@ onUnmounted(() => {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
-  }
-}
-
-// ✅ RESPONSIVE DESIGN
-@media (max-width: 992px) {
-  .chat-notification-toast {
-    right: 16px;
-    left: 16px;
-    max-width: none;
   }
 }
 </style>

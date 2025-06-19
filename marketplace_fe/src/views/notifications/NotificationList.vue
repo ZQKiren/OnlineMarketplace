@@ -5,7 +5,7 @@
       <div class="page-header">
         <div class="header-content">
           <div class="header-title">
-            <i class="material-icons">notifications_active</i>
+            <Bell class="header-icon" />
             <h4>Thông báo</h4>
             <span class="notification-count" v-if="unreadCount > 0">
               {{ unreadCount }} chưa đọc
@@ -17,7 +17,7 @@
               @click="markAllAsRead"
               class="btn waves-effect waves-light blue"
             >
-              <i class="material-icons left">done_all</i>
+              <CheckCheck class="btn-icon" />
               Đánh dấu tất cả đã đọc
             </button>
           </div>
@@ -28,7 +28,7 @@
       <div class="filter-section">
         <div class="filter-card">
           <div class="filter-header">
-            <i class="material-icons">filter_list</i>
+            <Filter class="filter-icon" />
             <span>Bộ lọc</span>
           </div>
           
@@ -53,7 +53,7 @@
               <div class="filter-item">
                 <label class="filter-label">Tìm kiếm</label>
                 <div class="search-wrapper">
-                  <i class="material-icons">search</i>
+                  <Search class="search-icon" />
                   <input 
                     v-model="filters.search"
                     @input="debounceSearch"
@@ -116,7 +116,7 @@
             <div class="notification-indicator" v-if="!notification.isRead"></div>
             
             <div class="notification-icon">
-              <i class="material-icons">{{ getNotificationIcon(notification.type) }}</i>
+              <component :is="getNotificationIcon(notification.type)" class="notification-type-icon" />
             </div>
             
             <div class="notification-body">
@@ -137,7 +137,7 @@
                   @click.stop="markAsRead(notification.id)"
                   class="mark-read-btn"
                 >
-                  <i class="material-icons">check</i>
+                  <Check class="mark-read-icon" />
                   Đánh dấu đã đọc
                 </button>
               </div>
@@ -148,7 +148,7 @@
         <!-- Empty State -->
         <div v-else class="empty-state">
           <div class="empty-icon">
-            <i class="material-icons">notifications_none</i>
+            <BellOff />
           </div>
           <h5>{{ filters.unreadOnly ? 'Bạn đã đọc hết thông báo' : 'Không có thông báo' }}</h5>
           <p>{{ filters.unreadOnly ? 'Tất cả thông báo đều đã được đọc.' : 'Chưa có thông báo nào được gửi đến bạn.' }}</p>
@@ -164,7 +164,7 @@
           <ul class="pagination">
             <li :class="{ disabled: meta.page === 1 }">
               <a @click="goToPage(meta.page - 1)" class="pagination-btn">
-                <i class="material-icons">chevron_left</i>
+                <ChevronLeft />
               </a>
             </li>
             
@@ -178,7 +178,7 @@
             
             <li :class="{ disabled: meta.page === meta.totalPages }">
               <a @click="goToPage(meta.page + 1)" class="pagination-btn">
-                <i class="material-icons">chevron_right</i>
+                <ChevronRight />
               </a>
             </li>
           </ul>
@@ -196,8 +196,44 @@ import { useToast } from 'vue-toastification'
 import dayjs from 'dayjs'
 import _ from 'lodash-es'
 
+// Lucide Icons
+import { 
+  Bell, 
+  BellOff, 
+  CheckCheck, 
+  Check, 
+  Filter, 
+  Search, 
+  ChevronLeft, 
+  ChevronRight,
+  Sparkles,
+  TrendingDown,
+  ShoppingBag,
+  RefreshCw,
+  Tag,
+  MessageSquare,
+  AlertTriangle
+} from 'lucide-vue-next'
+
 export default {
   name: 'NotificationList',
+  components: {
+    Bell,
+    BellOff,
+    CheckCheck,
+    Check,
+    Filter,
+    Search,
+    ChevronLeft,
+    ChevronRight,
+    Sparkles,
+    TrendingDown,
+    ShoppingBag,
+    RefreshCw,
+    Tag,
+    MessageSquare,
+    AlertTriangle
+  },
   setup() {
     const notificationStore = useNotificationStore()
     const router = useRouter()
@@ -279,15 +315,15 @@ export default {
 
     const getNotificationIcon = (type) => {
       const icons = {
-        NEW_PRODUCT: 'new_releases',
-        PRICE_DROP: 'trending_down',
-        ORDER_UPDATE: 'shopping_bag',
-        SYSTEM_UPDATE: 'system_update',
-        PROMOTION: 'local_offer',
-        REVIEW_REMINDER: 'rate_review',
-        STOCK_ALERT: 'warning',
+        NEW_PRODUCT: 'Sparkles',
+        PRICE_DROP: 'TrendingDown',
+        ORDER_UPDATE: 'ShoppingBag',
+        SYSTEM_UPDATE: 'RefreshCw',
+        PROMOTION: 'Tag',
+        REVIEW_REMINDER: 'MessageSquare',
+        STOCK_ALERT: 'AlertTriangle',
       }
-      return icons[type] || 'notifications'
+      return icons[type] || 'Bell'
     }
 
     const getNotificationTypeLabel = (type) => {
@@ -377,9 +413,10 @@ export default {
   align-items: center;
   gap: 12px;
   
-  i {
+  .header-icon {
     color: #1976d2;
-    font-size: 28px;
+    width: 28px;
+    height: 28px;
   }
   
   h4 {
@@ -396,6 +433,12 @@ export default {
   border-radius: 16px;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
 }
 
 .filter-section {
@@ -417,8 +460,10 @@ export default {
   color: #2c3e50;
   font-weight: 500;
   
-  i {
+  .filter-icon {
     color: #1976d2;
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -466,11 +511,12 @@ export default {
   display: flex;
   align-items: center;
   
-  i {
+  .search-icon {
     position: absolute;
     left: 12px;
     color: #6c757d;
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
   }
   
   input {
@@ -585,9 +631,10 @@ export default {
   align-items: center;
   justify-content: center;
   
-  i {
+  .notification-type-icon {
     color: #1976d2;
-    font-size: 24px;
+    width: 24px;
+    height: 24px;
   }
 }
 
@@ -703,8 +750,9 @@ export default {
     background: #1565c0;
   }
   
-  i {
-    font-size: 16px;
+  .mark-read-icon {
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -721,8 +769,9 @@ export default {
 .empty-icon {
   margin-bottom: 20px;
   
-  i {
-    font-size: 80px;
+  svg {
+    width: 80px;
+    height: 80px;
     color: #e0e0e0;
   }
 }
@@ -795,8 +844,9 @@ export default {
     border-color: #1976d2;
   }
   
-  i {
-    font-size: 20px;
+  svg {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -840,8 +890,9 @@ export default {
     width: 40px;
     height: 40px;
     
-    i {
-      font-size: 20px;
+    .notification-type-icon {
+      width: 20px;
+      height: 20px;
     }
   }
   
@@ -869,8 +920,9 @@ export default {
     padding: 40px 16px;
   }
   
-  .empty-icon i {
-    font-size: 60px;
+  .empty-icon svg {
+    width: 60px;
+    height: 60px;
   }
 }
 </style>

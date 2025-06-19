@@ -1,10 +1,21 @@
-// src/main.js - FIXED WITH PROPER INITIALIZATION ORDER
+// src/main.js - ENHANCED WITH NOTIFICATION SYSTEM
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import Toast from 'vue-toastification'
 import 'vue-toastification/dist/index.css'
+
+// Import dayjs with plugins
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import localizedFormat from 'dayjs/plugin/localizedFormat'
+import 'dayjs/locale/vi'
+
+// Setup dayjs plugins
+dayjs.extend(relativeTime)
+dayjs.extend(localizedFormat)
+dayjs.locale('vi')
 
 // Import Materialize CSS và JS
 import 'materialize-css/dist/css/materialize.min.css'
@@ -13,13 +24,15 @@ import M from 'materialize-css/dist/js/materialize.min.js'
 import 'material-design-icons/iconfont/material-icons.css'
 import './assets/styles/main.scss'
 
-// ✅ Import stores và socket service
+// Import stores và services
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
+import { useNotificationStore } from '@/stores/notification'
 import socketService from './services/socket.service'
 
-// Làm cho Materialize M object có thể truy cập globally
+// Make Materialize M object available globally
 window.M = M
+window.dayjs = dayjs
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -35,106 +48,91 @@ app.use(Toast, {
   pauseOnHover: true,
 })
 
-// ✅ CRITICAL: Initialize auth BEFORE mounting app
+// Make dayjs available in all components
+app.config.globalProperties.$dayjs = dayjs
+
+// Initialize app with notification system
 const initializeApp = async () => {
-  console.log('🚀 Starting app initialization...')
-  
   try {
     // Initialize stores
     const authStore = useAuthStore()
     const chatStore = useChatStore()
+    const notificationStore = useNotificationStore()
     
-    // ✅ CRITICAL: Initialize auth store FIRST
-    console.log('🔐 Initializing authentication...')
+    // Initialize auth store first
     await authStore.initialize()
     
-    // ✅ Setup real-time features if user is authenticated
+    // Setup real-time features if user is authenticated
     if (authStore.isAuthenticated) {
-      console.log('✅ User authenticated, setting up real-time features...')
-      await setupRealTimeFeatures(authStore, chatStore)
+      await setupRealTimeFeatures(authStore, chatStore, notificationStore)
     } else {
-      console.log('🔐 User not authenticated, skipping real-time setup')
-      // Still setup handlers for when user logs in later
-      setupSocketHandlers(chatStore)
+      // Setup handlers for when user logs in later
+      setupSocketHandlers(chatStore, notificationStore)
     }
     
-    // ✅ Setup auth state watcher
-    setupAuthWatcher(authStore, chatStore)
-    
-    console.log('🎉 App initialization complete!')
+    // Setup auth state watcher
+    setupAuthWatcher(authStore, chatStore, notificationStore)
     
   } catch (error) {
-    console.error('❌ App initialization error:', error)
+    console.error('App initialization error:', error)
   }
 }
 
-// ✅ Setup real-time features
-const setupRealTimeFeatures = async (authStore, chatStore) => {
+// Setup real-time features with notifications
+const setupRealTimeFeatures = async (authStore, chatStore, notificationStore) => {
   try {
-    console.log('🔌 Setting up real-time features...')
-    
     // Setup socket event handlers first
-    setupSocketHandlers(chatStore)
+    setupSocketHandlers(chatStore, notificationStore)
     
-    // Connect to socket
+    // Connect to chat socket
     await socketService.connect(authStore.token)
-    console.log('✅ Socket connected!')
     
-    // Load chats after socket is connected
-    console.log('📋 Loading chats...')
-    await chatStore.fetchChats()
-    console.log('✅ Chats loaded!')
+    // Connect to notification socket
+    notificationStore.connectSocket(authStore.token)
+    
+    // Load data after sockets are connected
+    await Promise.all([
+      chatStore.fetchChats(),
+      notificationStore.fetchNotifications(),
+      notificationStore.fetchUnreadCount()
+    ])
     
   } catch (error) {
-    console.error('❌ Real-time setup failed:', error)
-    // Don't logout user just because socket failed
+    console.error('Real-time setup failed:', error)
   }
 }
 
-// ✅ Setup socket event handlers
-const setupSocketHandlers = (chatStore) => {
-  console.log('🔌 Setting up socket event handlers...')
-  
+// Setup socket event handlers with notifications
+const setupSocketHandlers = (chatStore, notificationStore) => {
   // Clear existing handlers first
   socketService.eventCallbacks.clear()
   
-  // Handle new messages
+  // Chat handlers
   socketService.onNewMessage((message) => {
-    console.log('🔔 Main: New message received:', message.id)
     chatStore.handleNewMessage(message)
   })
   
-  // Handle user online/offline status
   socketService.onUserOnline((data) => {
-    console.log('🟢 Main: User online:', data.userId)
     chatStore.updateOnlineStatus(data.userId, true)
   })
   
   socketService.onUserOffline((data) => {
-    console.log('🔴 Main: User offline:', data.userId)
     chatStore.updateOnlineStatus(data.userId, false)
   })
   
-  // Handle messages read
   socketService.onMessagesRead((data) => {
-    console.log('✅ Main: Messages read:', data.chatId)
     chatStore.markChatAsRead(data.chatId, data.userId)
   })
   
-  // Handle typing indicators
   socketService.onUserTyping((data) => {
     chatStore.setUserTyping(data.chatId, data.userId, data.userName, data.isTyping)
   })
-  
-  console.log('✅ Socket handlers setup complete')
 }
 
-// ✅ Setup auth state watcher
-const setupAuthWatcher = (authStore, chatStore) => {
+// Setup auth state watcher with notifications
+const setupAuthWatcher = (authStore, chatStore, notificationStore) => {
   let previousAuthState = authStore.isAuthenticated
   let previousToken = authStore.token
-  
-  console.log('👁️ Setting up auth state watcher...')
   
   const watchAuthChanges = () => {
     const currentAuthState = authStore.isAuthenticated
@@ -142,23 +140,17 @@ const setupAuthWatcher = (authStore, chatStore) => {
     
     // Check if auth state changed
     if (currentAuthState !== previousAuthState || currentToken !== previousToken) {
-      console.log('🔄 Auth state changed:', {
-        wasAuth: previousAuthState,
-        nowAuth: currentAuthState,
-        hasToken: !!currentToken,
-        hasUser: !!authStore.user
-      })
       
       if (currentAuthState && currentToken && !previousAuthState) {
         // User just logged in
-        console.log('👋 User logged in, setting up real-time...')
-        setupRealTimeFeatures(authStore, chatStore)
+        setupRealTimeFeatures(authStore, chatStore, notificationStore)
         
       } else if (!currentAuthState && previousAuthState) {
         // User just logged out
-        console.log('👋 User logged out, disconnecting...')
         socketService.disconnect()
         chatStore.clearData()
+        notificationStore.disconnectSocket()
+        notificationStore.clearNotifications()
       }
       
       previousAuthState = currentAuthState
@@ -170,93 +162,116 @@ const setupAuthWatcher = (authStore, chatStore) => {
   setInterval(watchAuthChanges, 2000)
 }
 
-// ✅ CRITICAL: Wait for router to be ready, then initialize, then mount
+// Wait for router to be ready, then initialize, then mount
 router.isReady().then(async () => {
-  console.log('🛣️ Router is ready')
-  
-  // Initialize app BEFORE mounting
   await initializeApp()
-  
-  // NOW mount the app
   app.mount('#app')
-  console.log('🚀 App mounted successfully')
 })
 
-// ✅ Better cleanup and reconnection handling
+// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
-  console.log('👋 App closing, cleaning up...')
   socketService.disconnect()
+  const notificationStore = useNotificationStore()
+  notificationStore.disconnectSocket()
 })
 
-// ✅ Handle page visibility for reconnection
+// Handle page visibility for reconnection
 document.addEventListener('visibilitychange', () => {
   const authStore = useAuthStore()
+  const notificationStore = useNotificationStore()
   
   if (!document.hidden && authStore.isAuthenticated) {
     setTimeout(() => {
+      // Reconnect chat socket
       if (!socketService.isConnected && authStore.token) {
-        console.log('👁️ Page visible, reconnecting socket...')
-        socketService.connect(authStore.token).then(() => {
-          console.log('✅ Socket reconnected on visibility')
-        }).catch(error => {
-          console.error('❌ Visibility reconnection failed:', error)
+        socketService.connect(authStore.token).catch(error => {
+          console.error('Chat visibility reconnection failed:', error)
         })
+      }
+      
+      // Reconnect notification socket
+      if (!notificationStore.isConnected && authStore.token) {
+        notificationStore.connectSocket(authStore.token)
       }
     }, 1000)
   }
 })
 
-// ✅ Handle window focus
+// Handle window focus
 window.addEventListener('focus', () => {
   const authStore = useAuthStore()
+  const notificationStore = useNotificationStore()
   
-  if (authStore.isAuthenticated && !socketService.isConnected && authStore.token) {
-    console.log('🎯 Window focused, checking connection...')
+  if (authStore.isAuthenticated && authStore.token) {
     setTimeout(() => {
-      socketService.connect(authStore.token).then(() => {
-        console.log('✅ Socket reconnected on focus')
-      }).catch(error => {
-        console.error('❌ Focus reconnection failed:', error)
-      })
+      // Check chat socket
+      if (!socketService.isConnected) {
+        socketService.connect(authStore.token).catch(error => {
+          console.error('Chat focus reconnection failed:', error)
+        })
+      }
+      
+      // Check notification socket
+      if (!notificationStore.isConnected) {
+        notificationStore.connectSocket(authStore.token)
+      }
     }, 500)
   }
 })
 
-// ✅ Handle online/offline events
+// Handle online/offline events
 window.addEventListener('online', () => {
-  console.log('🌐 Back online!')
   const authStore = useAuthStore()
+  const notificationStore = useNotificationStore()
   
   if (authStore.isAuthenticated && authStore.token) {
     setTimeout(() => {
-      socketService.connect(authStore.token).then(() => {
-        console.log('✅ Socket reconnected after coming online')
-      }).catch(error => {
-        console.error('❌ Online reconnection failed:', error)
+      // Reconnect chat socket
+      socketService.connect(authStore.token).catch(error => {
+        console.error('Chat online reconnection failed:', error)
       })
+      
+      // Reconnect notification socket
+      notificationStore.connectSocket(authStore.token)
+      
+      // Refresh notification data
+      notificationStore.refreshData()
+      
     }, 2000)
   }
 })
 
 window.addEventListener('offline', () => {
-  console.log('📶 Gone offline')
+  // Silent handling - no log needed
 })
 
-// ✅ Global error handler
+// Global error handler with dayjs error handling
 app.config.errorHandler = (error, instance, info) => {
   console.error('Vue Error:', error)
-  console.error('Component:', instance)  
-  console.error('Info:', info)
+  
+  // Special handling for dayjs errors
+  if (error.message && error.message.includes('fromNow')) {
+    console.error('DayJS fromNow error - check if relativeTime plugin is loaded')
+  }
 }
 
-console.log('🚀 Vue app setup complete')
-
-// ✅ DEBUGGING: Expose for manual testing in dev mode
+// Expose for manual testing in dev mode
 if (import.meta.env.DEV) {
   window.socketService = socketService
   window.getAuthStore = () => useAuthStore()
   window.getChatStore = () => useChatStore()
+  window.getNotificationStore = () => useNotificationStore()
+  window.dayjs = dayjs
   
-  console.log('🐛 Debug: Socket service available at window.socketService')
-  console.log('🐛 Debug: Stores available at window.getAuthStore() and window.getChatStore()')
+  window.testNotificationSocket = () => {
+    const notificationStore = window.getNotificationStore()
+    return notificationStore.testSocketConnection()
+  }
+  
+  window.testDayjs = () => {
+    console.log('Testing dayjs...')
+    console.log('Current time:', dayjs().format())
+    console.log('Relative time:', dayjs().subtract(1, 'hour').fromNow())
+    return 'Check console for dayjs test results'
+  }
 }

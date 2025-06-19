@@ -6,7 +6,7 @@
         <!-- Header -->
         <div class="auth-header">
           <div class="logo">
-            <i class="material-icons">store</i>
+            <Store class="logo-icon" />
             <h1>ShopApp</h1>
           </div>
           <h2>Welcome Back</h2>
@@ -15,7 +15,7 @@
 
         <!-- Error Message -->
         <div v-if="errorMessage" class="error-alert">
-          <i class="material-icons">error_outline</i>
+          <AlertCircle class="alert-icon" />
           <span>{{ errorMessage }}</span>
         </div>
 
@@ -23,7 +23,7 @@
         <form @submit.prevent="handleLogin" class="auth-form">
           <div class="input-group">
             <div class="input-wrapper">
-              <i class="material-icons">email</i>
+              <Mail class="input-icon" />
               <input 
                 type="email" 
                 v-model="form.email"
@@ -38,7 +38,7 @@
 
           <div class="input-group">
             <div class="input-wrapper">
-              <i class="material-icons">lock</i>
+              <Lock class="input-icon" />
               <input 
                 :type="showPassword ? 'text' : 'password'" 
                 v-model="form.password"
@@ -52,7 +52,8 @@
                 class="password-toggle"
                 @click="showPassword = !showPassword"
               >
-                <i class="material-icons">{{ showPassword ? 'visibility_off' : 'visibility' }}</i>
+                <Eye v-if="!showPassword" class="toggle-icon" />
+                <EyeOff v-else class="toggle-icon" />
               </button>
             </div>
             <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
@@ -91,23 +92,23 @@
       <div class="side-panel">
         <div class="side-content">
           <div class="side-illustration">
-            <i class="material-icons">shopping_cart</i>
-            <i class="material-icons">favorite</i>
-            <i class="material-icons">local_shipping</i>
+            <ShoppingCart class="float-icon" />
+            <Heart class="float-icon" />
+            <Truck class="float-icon" />
           </div>
           <h3>Your Shopping Journey Starts Here</h3>
           <p>Discover amazing products, track your orders, and enjoy a seamless shopping experience.</p>
           <div class="features">
             <div class="feature">
-              <i class="material-icons">check_circle</i>
+              <CheckCircle class="feature-icon" />
               <span>Secure Shopping</span>
             </div>
             <div class="feature">
-              <i class="material-icons">check_circle</i>
+              <CheckCircle class="feature-icon" />
               <span>Fast Delivery</span>
             </div>
             <div class="feature">
-              <i class="material-icons">check_circle</i>
+              <CheckCircle class="feature-icon" />
               <span>24/7 Support</span>
             </div>
           </div>
@@ -123,6 +124,20 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import { validators } from '@/utils/validators'
+
+// Lucide Icons
+import {
+  Store,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  ShoppingCart,
+  Heart,
+  Truck,
+  CheckCircle
+} from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -301,8 +316,9 @@ const handleLogin = async () => {
     gap: 12px;
     margin-bottom: 30px;
     
-    .material-icons {
-      font-size: 32px;
+    .logo-icon {
+      width: 32px;
+      height: 32px;
       color: $primary-color;
     }
     
@@ -339,8 +355,9 @@ const handleLogin = async () => {
   margin-bottom: 24px;
   border-left: 4px solid #c62828;
   
-  .material-icons {
-    font-size: 20px;
+  .alert-icon {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -367,10 +384,11 @@ const handleLogin = async () => {
     box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
   }
   
-  .material-icons {
+  .input-icon {
     color: #6c757d;
     margin: 0 15px;
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
   }
   
   input {
@@ -397,9 +415,16 @@ const handleLogin = async () => {
     padding: 0 15px;
     cursor: pointer;
     color: #6c757d;
+    display: flex;
+    align-items: center;
     
     &:hover {
       color: $primary-color;
+    }
+    
+    .toggle-icon {
+      width: 20px;
+      height: 20px;
     }
   }
 }
@@ -571,8 +596,9 @@ const handleLogin = async () => {
   gap: 20px;
   margin-bottom: 40px;
   
-  .material-icons {
-    font-size: 48px;
+  .float-icon {
+    width: 48px;
+    height: 48px;
     opacity: 0.9;
     animation: float 3s ease-in-out infinite;
     
@@ -612,8 +638,9 @@ const handleLogin = async () => {
   align-items: center;
   gap: 12px;
   
-  .material-icons {
-    font-size: 20px;
+  .feature-icon {
+    width: 20px;
+    height: 20px;
     color: #4caf50;
   }
   
