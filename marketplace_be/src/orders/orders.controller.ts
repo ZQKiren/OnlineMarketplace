@@ -1,4 +1,4 @@
-// src/orders/orders.controller.ts
+// src/orders/orders.controller.ts - UPDATED với Loyalty endpoints
 import { 
   Controller, 
   Get, 
@@ -60,7 +60,6 @@ export class OrdersController {
     return this.ordersService.updateStatus(id, status, user.role === Role.ADMIN);
   }
 
-  // New endpoint to complete COD payment
   @Post(':id/complete-cod-payment')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)

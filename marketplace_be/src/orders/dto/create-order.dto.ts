@@ -1,4 +1,4 @@
-// src/orders/dto/create-order.dto.ts
+// src/orders/dto/create-order.dto.ts - UPDATED
 import { 
   IsArray, 
   ValidateNested, 
@@ -7,6 +7,7 @@ import {
   IsNumber, 
   IsEnum,
   IsObject,
+  IsUUID,
   Min 
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -55,4 +56,9 @@ export class CreateOrderDto {
   @ValidateNested()
   @Type(() => ShippingAddressDto)
   shippingAddress?: ShippingAddressDto;
+
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  redemptionId?: string; // ✨ NEW: For loyalty redemption
 }

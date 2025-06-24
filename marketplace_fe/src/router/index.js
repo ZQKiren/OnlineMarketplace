@@ -116,6 +116,24 @@ const routes = [
     component: () => import('../views/notifications/NotificationList.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/loyalty',
+    name: 'loyalty-dashboard',
+    component: () => import('@/views/loyalty/LoyaltyDashboard.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/loyalty/history',
+    name: 'loyalty-history',
+    component: () => import('@/views/loyalty/LoyaltyHistory.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/loyalty/redeem',
+    name: 'loyalty-redeem',
+    component: () => import('@/views/loyalty/LoyaltyRedeem.vue'),
+    meta: { requiresAuth: true },
+  },
   // Admin routes
   {
     path: '/admin',
@@ -152,6 +170,11 @@ const routes = [
         name: 'AdminNotificationManagement',
         component: () => import('../views/admin/NotificationManagement.vue'),
         meta: { requiresAuth: true, requiresAdmin: true }
+      },
+      {
+        path: 'loyalty',
+        name: 'admin-loyalty',
+        component: () => import('@/views/admin/LoyaltyManagement.vue'),
       },
     ],
   }

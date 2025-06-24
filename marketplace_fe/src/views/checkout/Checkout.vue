@@ -1,4 +1,4 @@
-<!-- src/views/checkout/Checkout.vue -->
+<!-- src/views/checkout/Checkout.vue - UPDATED với Loyalty Integration -->
 <template>
   <div class="container">
     <h4>Checkout</h4>
@@ -61,6 +61,90 @@
             </div>
           </div>
         </div>
+
+        <!-- ✨ NEW: Loyalty Points Redemption -->
+        <div class="custom-card loyalty-redemption-card">
+          <div class="card-header">
+            <h5>
+              <i class="material-icons">card_giftcard</i>
+              Apply Loyalty Points
+            </h5>
+            <div class="loyalty-balance">
+              <i class="material-icons">stars</i>
+              <span>{{ userLoyaltyPoints }} Points Available</span>
+            </div>
+          </div>
+          
+          <div v-if="userLoyaltyPoints > 0" class="loyalty-content">
+            <!-- Available Redemptions -->
+            <div class="redemptions-grid">
+              <div 
+                v-for="redemption in availableRedemptions" 
+                :key="redemption.id"
+                class="redemption-option"
+                :class="{ 
+                  'selected': selectedRedemption?.id === redemption.id,
+                  'disabled': !canUseRedemption(redemption)
+                }"
+                @click="selectRedemption(redemption)"
+              >
+                <div class="redemption-header">
+                  <div class="redemption-title">{{ redemption.title }}</div>
+                  <div class="redemption-badge">
+                    {{ getDiscountText(redemption) }}
+                  </div>
+                </div>
+                
+                <div class="redemption-details">
+                  <p class="redemption-description">{{ redemption.description }}</p>
+                  
+                  <div class="redemption-cost">
+                    <span class="cost-points">{{ redemption.pointsCost }} points</span>
+                    <span v-if="redemption.minOrderValue" class="min-order">
+                      Min. order: ${{ redemption.minOrderValue }}
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="redemption-actions">
+                  <button 
+                    v-if="selectedRedemption?.id === redemption.id"
+                    class="btn-small red waves-effect"
+                    @click.stop="removeRedemption"
+                  >
+                    Remove
+                  </button>
+                  <button 
+                    v-else-if="canUseRedemption(redemption)"
+                    class="btn-small blue waves-effect"
+                    @click.stop="selectRedemption(redemption)"
+                  >
+                    Apply
+                  </button>
+                  <span v-else class="redemption-status">
+                    {{ getRedemptionStatus(redemption) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- No Available Redemptions -->
+            <div v-if="availableRedemptions.length === 0" class="no-redemptions">
+              <i class="material-icons">info</i>
+              <p>No redemption options available for your current point balance or order amount.</p>
+            </div>
+          </div>
+          
+          <!-- No Points Available -->
+          <div v-else class="no-points">
+            <i class="material-icons">stars_border</i>
+            <div>
+              <p><strong>No loyalty points available</strong></p>
+              <p>Start earning points by making purchases! You'll get 1 point for every $1 spent.</p>
+              <router-link to="/loyalty" class="btn-flat blue-text">Learn More</router-link>
+            </div>
+          </div>
+        </div>
         
         <!-- Payment Method -->
         <div class="custom-card">
@@ -107,7 +191,7 @@
               <div>
                 <p><strong>Cash on Delivery</strong></p>
                 <p>You will pay cash when the order is delivered to your address. Please ensure you have the exact amount ready.</p>
-                <p class="cod-amount"><strong>Amount to pay: ${{ totalWithTax.toFixed(2) }}</strong></p>
+                <p class="cod-amount"><strong>Amount to pay: ${{ finalTotal.toFixed(2) }}</strong></p>
               </div>
             </div>
           </div>
@@ -150,11 +234,32 @@
             <span>${{ tax.toFixed(2) }}</span>
           </div>
           
+          <!-- ✨ NEW: Loyalty Discount Display -->
+          <div v-if="selectedRedemption && loyaltyDiscount > 0" class="summary-row loyalty-discount">
+            <span class="discount-label">
+              <i class="material-icons tiny">card_giftcard</i>
+              {{ selectedRedemption.title }}
+            </span>
+            <span class="discount-amount">-${{ loyaltyDiscount.toFixed(2) }}</span>
+          </div>
+          
           <div class="divider"></div>
           
           <div class="summary-row total">
             <span>Total</span>
-            <span class="price">${{ totalWithTax.toFixed(2) }}</span>
+            <span class="price">${{ finalTotal.toFixed(2) }}</span>
+          </div>
+          
+          <!-- ✨ NEW: Savings Display -->
+          <div v-if="loyaltyDiscount > 0" class="savings-display">
+            <i class="material-icons">savings</i>
+            <span>You saved ${{ loyaltyDiscount.toFixed(2) }} with loyalty points!</span>
+          </div>
+          
+          <!-- ✨ NEW: Points to Earn Display -->
+          <div class="points-earn-display">
+            <i class="material-icons">stars</i>
+            <span>You'll earn {{ pointsToEarn }} points from this order</span>
           </div>
           
           <!-- Payment Method Display -->
@@ -183,6 +288,7 @@ import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
+import { useLoyaltyStore } from '@/stores/loyalty' // ✨ NEW
 import { useToast } from 'vue-toastification'
 import { loadStripe } from '@stripe/stripe-js'
 import orderService from '@/services/order.service'
@@ -191,6 +297,7 @@ import paymentService from '@/services/payment.service'
 const router = useRouter()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
+const loyaltyStore = useLoyaltyStore() // ✨ NEW
 const toast = useToast()
 
 const stripe = ref(null)
@@ -200,6 +307,10 @@ const processing = ref(false)
 const selectedPaymentMethod = ref('card') // Default to card
 const stripeInitialized = ref(false)
 
+// ✨ NEW: Loyalty states
+const selectedRedemption = ref(null)
+const loyaltyDiscount = ref(0)
+
 const shippingInfo = ref({
   fullName: '',
   address: '',
@@ -208,8 +319,27 @@ const shippingInfo = ref({
   phone: ''
 })
 
+// ✨ NEW: Loyalty computed properties
+const userLoyaltyPoints = computed(() => authStore.user?.loyaltyPoints || 0)
+const availableRedemptions = computed(() => {
+  return loyaltyStore.redemptions.filter(redemption => 
+    redemption.isActive && 
+    redemption.pointsCost <= userLoyaltyPoints.value &&
+    (!redemption.minOrderValue || totalWithTax.value >= redemption.minOrderValue)
+  )
+})
+
 const tax = computed(() => cartStore.total * 0.08) // 8% tax
 const totalWithTax = computed(() => cartStore.total + tax.value)
+const finalTotal = computed(() => Math.max(0, totalWithTax.value - loyaltyDiscount.value))
+
+// ✨ NEW: Points calculation
+const pointsToEarn = computed(() => {
+  const earnRate = 0.01 // 1% earn rate
+  const minOrder = 10
+  if (finalTotal.value < minOrder) return 0
+  return Math.floor(finalTotal.value * earnRate)
+})
 
 // Auto-populate shipping info from user profile
 const populateShippingInfo = async () => {
@@ -225,10 +355,84 @@ const populateShippingInfo = async () => {
   }
 }
 
+// ✨ NEW: Loyalty methods
+const canUseRedemption = (redemption) => {
+  if (!redemption.isActive) return false
+  if (redemption.pointsCost > userLoyaltyPoints.value) return false
+  if (redemption.minOrderValue && totalWithTax.value < redemption.minOrderValue) return false
+  
+  const now = new Date()
+  if (redemption.validFrom && new Date(redemption.validFrom) > now) return false
+  if (redemption.validUntil && new Date(redemption.validUntil) < now) return false
+  if (redemption.maxUses && redemption.usageCount >= redemption.maxUses) return false
+  
+  return true
+}
+
+const getDiscountText = (redemption) => {
+  if (redemption.discountType === 'PERCENTAGE') {
+    return `${redemption.discountValue}% off`
+  } else if (redemption.discountType === 'FIXED_AMOUNT') {
+    return `${redemption.discountValue} off`
+  } else if (redemption.discountType === 'FREE_SHIPPING') {
+    return 'Free shipping'
+  }
+  return 'Discount'
+}
+
+const getRedemptionStatus = (redemption) => {
+  if (redemption.pointsCost > userLoyaltyPoints.value) {
+    return `Need ${redemption.pointsCost - userLoyaltyPoints.value} more points`
+  }
+  if (redemption.minOrderValue && totalWithTax.value < redemption.minOrderValue) {
+    return `Min. order ${redemption.minOrderValue}`
+  }
+  return 'Not available'
+}
+
+const calculateDiscount = (redemption, orderValue) => {
+  let discount = 0
+  
+  if (redemption.discountType === 'PERCENTAGE') {
+    discount = (orderValue * (redemption.discountValue || 0)) / 100
+  } else if (redemption.discountType === 'FIXED_AMOUNT') {
+    discount = redemption.discountValue || 0
+  } else if (redemption.discountType === 'FREE_SHIPPING') {
+    discount = 10 // Assume $10 shipping cost
+  }
+  
+  return Math.min(discount, orderValue)
+}
+
+const selectRedemption = (redemption) => {
+  if (!canUseRedemption(redemption)) {
+    toast.error('Cannot use this redemption option')
+    return
+  }
+  
+  selectedRedemption.value = redemption
+  loyaltyDiscount.value = calculateDiscount(redemption, totalWithTax.value)
+  
+  toast.success(`Applied ${redemption.title}! You save ${loyaltyDiscount.value.toFixed(2)}`)
+}
+
+const removeRedemption = () => {
+  selectedRedemption.value = null
+  loyaltyDiscount.value = 0
+  toast.info('Loyalty discount removed')
+}
+
 // Watch for user data changes
 watch(() => authStore.user, async () => {
   await populateShippingInfo()
 }, { immediate: true })
+
+// Watch for cart changes to update discount
+watch(() => cartStore.total, () => {
+  if (selectedRedemption.value) {
+    loyaltyDiscount.value = calculateDiscount(selectedRedemption.value, totalWithTax.value)
+  }
+})
 
 const initializeStripe = async () => {
   if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -371,8 +575,6 @@ const processPayment = async () => {
   }
 }
 
-// Cập nhật processCardPayment function trong Checkout.vue
-
 const processCardPayment = async (orderItems) => {
   // ✅ 1. TẠO PAYMENT METHOD TRƯỚC
   const { paymentMethod, error } = await stripe.value.createPaymentMethod({
@@ -388,20 +590,31 @@ const processCardPayment = async (orderItems) => {
     throw new Error(error.message)
   }
 
-  // ✅ 2. TẠO ORDER VỚI PAYMENT METHOD ID
-  const orderResponse = await orderService.createOrder({ 
+  // ✅ 2. TẠO ORDER VỚI LOYALTY REDEMPTION
+  const orderData = { 
     items: orderItems,
     shippingAddress: shippingInfo.value,
     paymentMethod: 'card',
-    paymentMethodId: paymentMethod.id  // ← THÊM VÀO DTO
-  })
+    paymentMethodId: paymentMethod.id
+  }
+  
+  // ✨ NEW: Add redemption if selected
+  if (selectedRedemption.value) {
+    orderData.redemptionId = selectedRedemption.value.id
+  }
+  
+  const orderResponse = await orderService.createOrder(orderData)
   const order = orderResponse.data
   
   // ✅ 3. XỬ LÝ PAYMENT TRONG BACKEND
-  // Backend sẽ tự động tạo payment intent và xử lý
-  
   if (order.payment?.status === 'COMPLETED') {
     await cartStore.clearCart()
+    
+    // ✨ NEW: Refresh loyalty data
+    if (selectedRedemption.value) {
+      await loyaltyStore.fetchSummary()
+    }
+    
     toast.success('Payment successful! Order placed.')
     router.push(`/orders/${order.id}`)
   } else {
@@ -410,17 +623,30 @@ const processCardPayment = async (orderItems) => {
 }
 
 const processCODPayment = async (orderItems) => {
-  // Create COD order
-  const orderResponse = await orderService.createOrder({ 
+  // Create COD order with loyalty redemption
+  const orderData = { 
     items: orderItems,
     shippingAddress: shippingInfo.value,
     paymentMethod: 'cod'
-  })
+  }
+  
+  // ✨ NEW: Add redemption if selected
+  if (selectedRedemption.value) {
+    orderData.redemptionId = selectedRedemption.value.id
+  }
+  
+  const orderResponse = await orderService.createOrder(orderData)
   const order = orderResponse.data
   
   // For COD, we don't need to process payment immediately
   // Clear cart and redirect to success page
   await cartStore.clearCart()
+  
+  // ✨ NEW: Refresh loyalty data
+  if (selectedRedemption.value) {
+    await loyaltyStore.fetchSummary()
+  }
+  
   toast.success('Order placed successfully! You will pay upon delivery.')
   router.push(`/orders/${order.id}`)
 }
@@ -438,6 +664,16 @@ onMounted(async () => {
   // Ensure user profile is loaded
   if (authStore.isAuthenticated && !authStore.user) {
     await authStore.fetchProfile()
+  }
+  
+  // ✨ NEW: Load loyalty data
+  try {
+    await loyaltyStore.fetchRedemptions()
+    if (authStore.isAuthenticated) {
+      await loyaltyStore.fetchSummary()
+    }
+  } catch (error) {
+    console.error('Error loading loyalty data:', error)
   }
   
   // Populate shipping info from user profile
@@ -470,6 +706,170 @@ onBeforeUnmount(() => {
   h5 {
     margin-bottom: 20px;
     color: #333;
+  }
+}
+
+// ✨ NEW: Loyalty redemption card styles
+.loyalty-redemption-card {
+  border: 1px solid #e3f2fd;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e3f2fd;
+    
+    h5 {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #2c3e50;
+      
+      i {
+        color: #ffd700;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      }
+    }
+    
+    .loyalty-balance {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #ffd700, #ffb347);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 8px rgba(255, 179, 71, 0.3);
+      
+      i {
+        font-size: 1.1rem;
+      }
+    }
+  }
+}
+
+.redemptions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.redemption-option {
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  
+  &:hover:not(.disabled) {
+    border-color: #2196f3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.15);
+  }
+  
+  &.selected {
+    border-color: #2196f3;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.2);
+  }
+  
+  &.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #f5f5f5;
+  }
+  
+  .redemption-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    
+    .redemption-title {
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 1.1rem;
+    }
+    
+    .redemption-badge {
+      background: #2196f3;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  }
+  
+  .redemption-details {
+    margin-bottom: 16px;
+    
+    .redemption-description {
+      color: #6c757d;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    
+    .redemption-cost {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
+      .cost-points {
+        font-weight: 600;
+        color: #ffd700;
+        font-size: 1.1rem;
+      }
+      
+      .min-order {
+        font-size: 0.8rem;
+        color: #6c757d;
+      }
+    }
+  }
+  
+  .redemption-actions {
+    display: flex;
+    justify-content: flex-end;
+    
+    .redemption-status {
+      font-size: 0.8rem;
+      color: #dc3545;
+      font-style: italic;
+    }
+  }
+}
+
+.no-redemptions, .no-points {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  
+  i {
+    font-size: 2rem;
+    color: #6c757d;
+  }
+  
+  p {
+    margin: 5px 0;
+    color: #6c757d;
+    
+    &:first-child {
+      font-weight: 600;
+      color: #2c3e50;
+    }
   }
 }
 
@@ -571,6 +971,26 @@ onBeforeUnmount(() => {
       font-weight: 600;
       font-size: 1.2rem;
     }
+    
+    // ✨ NEW: Loyalty discount styling
+    &.loyalty-discount {
+      color: #4caf50;
+      font-weight: 500;
+      
+      .discount-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        
+        i {
+          font-size: 1rem;
+        }
+      }
+      
+      .discount-amount {
+        font-weight: 600;
+      }
+    }
   }
   
   .payment-method-display {
@@ -582,6 +1002,34 @@ onBeforeUnmount(() => {
       font-weight: 500;
       color: #666;
     }
+  }
+  
+  // ✨ NEW: Savings and points display
+  .savings-display, .points-earn-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    
+    i {
+      font-size: 1.2rem;
+    }
+  }
+  
+  .savings-display {
+    background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+  }
+  
+  .points-earn-display {
+    background: linear-gradient(135deg, #fff3e0, #fef7ed);
+    color: #f57c00;
+    border: 1px solid #ffcc02;
   }
   
   .full-width {
@@ -601,5 +1049,37 @@ onBeforeUnmount(() => {
   color: #f44336;
   margin-top: 10px;
   font-size: 0.9rem;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .loyalty-redemption-card .card-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .redemptions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .redemption-option {
+    padding: 16px;
+    
+    .redemption-header {
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+  }
+  
+  .no-redemptions, .no-points {
+    flex-direction: column;
+    text-align: center;
+    
+    i {
+      font-size: 3rem;
+    }
+  }
 }
 </style>

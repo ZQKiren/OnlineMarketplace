@@ -1,4 +1,4 @@
-<!-- src/views/auth/Login.vue -->
+<!-- src/views/auth/Login.vue - COMPLETE VERSION WITH BLOCKED USER HANDLING -->
 <template>
   <div class="auth-container">
     <div class="auth-wrapper">
@@ -11,6 +11,17 @@
           </div>
           <h2>Welcome Back</h2>
           <p>Sign in to your account to continue</p>
+        </div>
+
+        <!-- ✅ Blocked User Alert -->
+        <div v-if="isBlockedRedirect" class="blocked-alert">
+          <div class="alert-content">
+            <UserX class="alert-icon blocked-icon" />
+            <div class="alert-text">
+              <h4>Account Blocked</h4>
+              <p>Your account has been blocked by an administrator. Please contact support for assistance.</p>
+            </div>
+          </div>
         </div>
 
         <!-- Error Message -->
@@ -119,7 +130,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
@@ -136,7 +147,8 @@ import {
   ShoppingCart,
   Heart,
   Truck,
-  CheckCircle
+  CheckCircle,
+  UserX // ✅ Add UserX icon for blocked users
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -153,9 +165,26 @@ const loading = ref(false)
 const showPassword = ref(false)
 const rememberMe = ref(false)
 const errorMessage = ref('')
+const isBlockedRedirect = ref(false) // ✅ Track if redirected due to blocked account
 const errors = reactive({
   email: '',
   password: ''
+})
+
+// ✅ Check if redirected due to blocked account
+onMounted(() => {
+  console.log('🔍 Login: Checking for blocked redirect query:', route.query.blocked)
+  
+  if (route.query.blocked === 'true') {
+    console.log('🚫 Login: User redirected due to blocked account')
+    isBlockedRedirect.value = true
+    errorMessage.value = '' // Clear any other error messages
+    
+    // Clear the query parameter after a delay
+    setTimeout(() => {
+      router.replace({ path: '/login' })
+    }, 100)
+  }
 })
 
 const clearFieldError = (field) => {
@@ -163,12 +192,17 @@ const clearFieldError = (field) => {
   if (errorMessage.value) {
     errorMessage.value = ''
   }
+  // ✅ Clear blocked redirect state when user starts typing
+  if (isBlockedRedirect.value) {
+    isBlockedRedirect.value = false
+  }
 }
 
 const clearAllErrors = () => {
   errorMessage.value = ''
   errors.email = ''
   errors.password = ''
+  isBlockedRedirect.value = false
 }
 
 const validateForm = () => {
@@ -200,13 +234,16 @@ const handleLogin = async () => {
   clearAllErrors()
   
   try {
+    console.log('🔐 Login: Attempting login for:', form.value.email)
     await authStore.login(form.value)
+    
     toast.success('Welcome back!')
     
     const redirectTo = route.query.redirect || '/'
+    console.log('✅ Login: Redirecting to:', redirectTo)
     router.push(redirectTo)
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('❌ Login: Login failed:', error)
     
     if (error.response) {
       const status = error.response.status
@@ -220,7 +257,15 @@ const handleLogin = async () => {
           errorMessage.value = 'Account not found!'
           break
         case 403:
-          errorMessage.value = 'Account is locked or not activated!'
+          // ✅ Enhanced blocked user handling
+          if (data.blocked || (data.message && data.message.toLowerCase().includes('blocked'))) {
+            console.log('🚫 Login: User account is blocked')
+            isBlockedRedirect.value = true
+            errorMessage.value = '' // Clear error message as we show blocked alert
+            toast.error('Your account has been blocked. Please contact support.')
+          } else {
+            errorMessage.value = data.message || 'Account is locked or not activated!'
+          }
           break
         case 422:
           if (data.errors) {
@@ -242,10 +287,13 @@ const handleLogin = async () => {
     } else if (error.request) {
       errorMessage.value = 'Unable to connect to server. Please check your network!'
     } else {
-      errorMessage.value = 'An unexpected error occurred!'
+      errorMessage.value = error.message || 'An unexpected error occurred!'
     }
     
-    toast.error('Login failed!')
+    // ✅ Only show toast error if not a blocked user (blocked users get special alert)
+    if (!isBlockedRedirect.value) {
+      toast.error('Login failed!')
+    }
   } finally {
     loading.value = false
   }
@@ -358,6 +406,45 @@ const handleLogin = async () => {
   .alert-icon {
     width: 20px;
     height: 20px;
+  }
+}
+
+// ✅ NEW: Blocked user alert styles
+.blocked-alert {
+  margin-bottom: 24px;
+  
+  .alert-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(244, 67, 54, 0.1);
+    border: 2px solid rgba(244, 67, 54, 0.3);
+    border-radius: 12px;
+    padding: 18px 20px;
+    
+    .blocked-icon {
+      color: #d32f2f;
+      width: 24px;
+      height: 24px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    
+    .alert-text {
+      h4 {
+        margin: 0 0 6px 0;
+        color: #d32f2f;
+        font-weight: 600;
+        font-size: 16px;
+      }
+      
+      p {
+        margin: 0;
+        color: rgba(211, 47, 47, 0.8);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+    }
   }
 }
 

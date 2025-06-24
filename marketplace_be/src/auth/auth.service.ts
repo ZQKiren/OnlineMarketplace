@@ -1,5 +1,5 @@
-// src/auth/auth.service.ts
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+// src/auth/auth.service.ts - COMPLETE VERSION WITH BLOCKED CHECK
+import { Injectable, UnauthorizedException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -49,12 +49,16 @@ export class AuthService {
         role: true,
         phone: true,
         avatar: true,
+        isBlocked: true, // ✅ Include isBlocked
+        loyaltyPoints: true,
         createdAt: true,
       },
     });
 
     // Generate token
     const token = this.generateToken(user);
+
+    console.log('✅ Registration successful:', user.email);
 
     return {
       user,
@@ -75,7 +79,9 @@ export class AuthService {
         phone: true,
         avatar: true,
         role: true,
-        password: true, // Need for password verification
+        isBlocked: true, 
+        password: true, 
+        loyaltyPoints: true,
         createdAt: true,
         _count: {
           select: {
@@ -91,6 +97,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Check if user is blocked BEFORE password check
+    if (user.isBlocked) {
+      console.log('🚫 Blocked user attempted login:', user.email);
+      throw new ForbiddenException('Your account has been blocked. Please contact support.');
+    }
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
@@ -101,8 +113,10 @@ export class AuthService {
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
 
-    // Generate token
+    // Generate token (includes isBlocked in payload for validation)
     const token = this.generateToken(user);
+
+    console.log('✅ Login successful for user:', user.email);
 
     return {
       user: userWithoutPassword,
@@ -115,6 +129,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      isBlocked: user.isBlocked, // ✅ Include in JWT payload for validation
     };
 
     return this.jwtService.sign(payload);

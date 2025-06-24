@@ -31,7 +31,6 @@ export class NotificationsService {
 
     let processedTargetUsers: string[] = [];
 
-    // ✅ FIX: Process targetUsers - handle both emails and user IDs
     if (!isGlobal && targetUsers?.length) {
       try {
         console.log('🔍 Processing target users:', targetUsers);

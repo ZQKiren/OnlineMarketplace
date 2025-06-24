@@ -1,31 +1,30 @@
-// src/admin/admin.controller.ts
-import { 
-  Controller, 
-  Get, 
+// src/admin/admin.controller.ts - COMPLETE ENHANCED VERSION
+import {
+  Controller,
+  Get,
   Post,
-  Param, 
+  Param,
   UseGuards,
   Query,
   ParseIntPipe,
   DefaultValuePipe,
   Body,
   Patch,
+  Delete,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { UsersService } from '../users/users.service';
-import { CreateUserDto } from '../users/dto/create-user.dto';
+import { BlockUserDto, UnblockUserDto } from './dto/block-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 export class AdminController {
-  constructor(
-    private readonly adminService: AdminService, 
-    private readonly usersService: UsersService,) {}
+  constructor(private readonly adminService: AdminService) { }
 
   @Get('dashboard')
   getDashboard() {
@@ -36,13 +35,74 @@ export class AdminController {
   getUsers(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('search') search?: string,
+    @Query('role') role?: string,
+    @Query('status') status?: string,
+    @Query('sortBy') sortBy?: string,
   ) {
-    return this.adminService.getUsers(page, limit);
+    console.log('🔍 Admin Controller - getUsers query params:', {
+      page,
+      limit,
+      search,
+      role,
+      status,
+      sortBy
+    });
+
+    return this.adminService.getUsers({
+      page,
+      limit,
+      search,
+      role,
+      status,
+      sortBy,
+    });
   }
 
   @Post('users/:id/block')
-  blockUser(@Param('id') id: string) {
-    return this.adminService.blockUser(id);
+  blockUser(
+    @Param('id') id: string,
+    @Body() blockUserDto: BlockUserDto,
+    @CurrentUser() currentUser: any
+  ) {
+    console.log('🚫 Admin blocking user:', {
+      targetUserId: id,
+      adminId: currentUser.id,
+      adminEmail: currentUser.email,
+      reason: blockUserDto.reason
+    });
+
+    return this.adminService.blockUser(id, blockUserDto);
+  }
+
+  @Post('users/:id/unblock')
+  unblockUser(
+    @Param('id') id: string,
+    @Body() unblockUserDto: UnblockUserDto,
+    @CurrentUser() currentUser: any
+  ) {
+    console.log('✅ Admin unblocking user:', {
+      targetUserId: id,
+      adminId: currentUser.id,
+      adminEmail: currentUser.email,
+      note: unblockUserDto.note
+    });
+
+    return this.adminService.unblockUser(id, unblockUserDto);
+  }
+
+  @Delete('users/:id')
+  deleteUser(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: any
+  ) {
+    console.log('🗑️ Admin deleting user:', {
+      targetUserId: id,
+      adminId: currentUser.id,
+      adminEmail: currentUser.email
+    });
+
+    return this.adminService.deleteUser(id);
   }
 
   @Get('orders')
@@ -62,7 +122,6 @@ export class AdminController {
     });
   }
 
-  // 🆕 THÊM METHOD CẬP NHẬT TRẠNG THÁI ORDER
   @Patch('orders/:id/status')
   updateOrderStatus(
     @Param('id') id: string,
@@ -71,12 +130,6 @@ export class AdminController {
     return this.adminService.updateOrderStatus(id, status);
   }
 
-  @Post('users')
-  createUser(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
-  }
-
-  // 🆕 THÊM ENDPOINT CHO PRODUCTS (THEO YÊU CẦU TÀI LIỆU)
   @Get('products')
   getAllProducts(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
@@ -94,7 +147,6 @@ export class AdminController {
     });
   }
 
-  // 🆕 BULK DELETE (THEO YÊU CẦU: Thêm, sửa, xóa sản phẩm)
   @Post('products/bulk-delete')
   bulkDeleteProducts(@Body('productIds') productIds: string[]) {
     return this.adminService.bulkDeleteProducts(productIds);

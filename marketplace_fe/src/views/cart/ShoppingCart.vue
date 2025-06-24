@@ -1,4 +1,4 @@
-<!-- src/views/cart/ShoppingCart.vue -->
+<!-- src/views/cart/ShoppingCart.vue - REMOVED Loyalty Integration -->
 <template>
   <div class="container shopping-cart-container">
     <!-- Header with breadcrumbs -->
@@ -38,6 +38,7 @@
         </div>
         <h5>Your cart is empty</h5>
         <p>Looks like you haven't added any items to your cart yet.</p>
+        
         <div class="empty-cart-actions">
           <router-link to="/products" class="btn waves-effect waves-light btn-large">
             <Store class="icon-left" />
@@ -189,6 +190,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import CartItem from '@/components/cart/CartItem.vue'
 
@@ -210,6 +212,7 @@ import {
 } from 'lucide-vue-next'
 
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 const toast = useToast()
 
 // Loading states
@@ -335,19 +338,6 @@ onUnmounted(() => {
 
 .cart-header {
   margin-bottom: 30px;
-  
-  .nav-wrapper {
-    margin-bottom: 10px;
-    
-    .breadcrumb {
-      color: #666;
-      font-size: 14px;
-      
-      &:before {
-        color: #999;
-      }
-    }
-  }
   
   .cart-title {
     color: #333;
@@ -630,6 +620,7 @@ onUnmounted(() => {
         display: flex;
         align-items: center;
         justify-content: center;
+        margin-bottom: 10px;
         
         .icon-left {
           margin-right: 8px;
@@ -659,6 +650,20 @@ onUnmounted(() => {
     i {
       margin-right: 5px;
       font-size: 16px;
+    }
+  }
+}
+
+// Modal styles
+.modal {
+  .modal-content {
+    h4 {
+      display: flex;
+      align-items: center;
+      
+      i {
+        margin-right: 10px;
+      }
     }
   }
 }
@@ -733,19 +738,5 @@ onUnmounted(() => {
 .preloader-wrapper {
   width: 60px;
   height: 60px;
-}
-
-// Modal styles
-.modal {
-  .modal-content {
-    h4 {
-      display: flex;
-      align-items: center;
-      
-      i {
-        margin-right: 10px;
-      }
-    }
-  }
 }
 </style>

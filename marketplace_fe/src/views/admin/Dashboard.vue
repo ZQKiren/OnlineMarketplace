@@ -3,11 +3,11 @@
     <div class="dashboard-header">
       <h4>Admin Dashboard</h4>
     </div>
-    
+
     <div v-if="loading" class="loading-spinner">
       <LoadingSpinner text="Loading dashboard data..." />
     </div>
-    
+
     <div v-else>
       <!-- Main Stats Cards -->
       <div class="stats-grid">
@@ -24,7 +24,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="stat-card green">
           <div class="stat-icon">
             <Package class="stat-icon-svg" />
@@ -38,7 +38,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="stat-card orange">
           <div class="stat-icon">
             <ShoppingCart class="stat-icon-svg" />
@@ -52,7 +52,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="stat-card purple">
           <div class="stat-icon">
             <DollarSign class="stat-icon-svg" />
@@ -79,7 +79,7 @@
             View All
           </router-link>
         </div>
-        
+
         <!-- Notification Stats -->
         <div class="notification-stats">
           <div class="mini-stat">
@@ -91,7 +91,7 @@
               <div class="mini-stat-label">Total</div>
             </div>
           </div>
-          
+
           <div class="mini-stat">
             <div class="mini-stat-icon green">
               <CheckCircle class="mini-stat-icon-svg" />
@@ -101,7 +101,7 @@
               <div class="mini-stat-label">Delivered</div>
             </div>
           </div>
-          
+
           <div class="mini-stat">
             <div class="mini-stat-icon orange">
               <Clock class="mini-stat-icon-svg" />
@@ -111,7 +111,7 @@
               <div class="mini-stat-label">Pending</div>
             </div>
           </div>
-          
+
           <div class="mini-stat">
             <div class="mini-stat-icon purple">
               <Globe class="mini-stat-icon-svg" />
@@ -122,37 +122,25 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Quick Actions -->
         <div class="quick-actions">
-          <button 
-            @click="sendTestNotification"
-            class="action-btn primary"
-          >
+          <button @click="sendTestNotification" class="action-btn primary">
             <Send class="action-icon" />
             Send Test
           </button>
-          
-          <router-link 
-            to="/admin/notifications/create" 
-            class="action-btn success"
-          >
+
+          <router-link to="/admin/notifications/create" class="action-btn success">
             <BellPlus class="action-icon" />
             Create New
           </router-link>
-          
-          <router-link 
-            to="/admin/notifications" 
-            class="action-btn info"
-          >
+
+          <router-link to="/admin/notifications" class="action-btn info">
             <Settings class="action-icon" />
             Manage All
           </router-link>
-          
-          <button 
-            @click="viewNotificationAnalytics"
-            class="action-btn warning"
-          >
+
+          <button @click="viewNotificationAnalytics" class="action-btn warning">
             <BarChart3 class="action-icon" />
             Analytics
           </button>
@@ -172,25 +160,18 @@
               View All
             </router-link>
           </div>
-          
+
           <div class="notifications-list">
             <div v-if="recentNotifications.length === 0" class="empty-state">
               <BellOff class="empty-icon" />
               <p>No recent notifications</p>
             </div>
-            
-            <div
-              v-for="notification in recentNotifications"
-              :key="notification.id"
-              class="notification-item"
-            >
-              <div 
-                class="notification-icon"
-                :class="getNotificationIconClass(notification.type)"
-              >
+
+            <div v-for="notification in recentNotifications" :key="notification.id" class="notification-item">
+              <div class="notification-icon" :class="getNotificationIconClass(notification.type)">
                 <component :is="getNotificationIcon(notification.type)" class="notification-type-icon" />
               </div>
-              
+
               <div class="notification-content">
                 <div class="notification-title">{{ notification.title }}</div>
                 <div class="notification-message">{{ notification.message }}</div>
@@ -202,17 +183,14 @@
                   </span>
                 </div>
               </div>
-              
+
               <div class="notification-status">
-                <div 
-                  class="status-dot"
-                  :class="notification.isActive ? 'active' : 'inactive'"
-                ></div>
+                <div class="status-dot" :class="notification.isActive ? 'active' : 'inactive'"></div>
               </div>
             </div>
           </div>
         </div>
-        
+
         <!-- Revenue Chart -->
         <div class="section-card">
           <div class="section-header">
@@ -224,7 +202,7 @@
               <span class="period-label">Last 6 months</span>
             </div>
           </div>
-          
+
           <div class="chart-container">
             <canvas ref="revenueChart"></canvas>
           </div>
@@ -242,7 +220,7 @@
             View All
           </router-link>
         </div>
-        
+
         <div class="table-container">
           <table class="orders-table">
             <thead>
@@ -279,10 +257,7 @@
                 </td>
                 <td>
                   <div class="order-actions">
-                    <router-link 
-                      :to="`/orders/${order.id}`"
-                      class="btn-small blue waves-effect"
-                    >
+                    <router-link :to="`/orders/${order.id}`" class="btn-small blue waves-effect">
                       View
                     </router-link>
                   </div>
@@ -303,18 +278,11 @@
               <h6>Top Products</h6>
             </div>
           </div>
-          
+
           <div class="products-list">
-            <div 
-              v-for="product in stats.topProducts" 
-              :key="product.id"
-              class="product-item"
-            >
+            <div v-for="product in stats.topProducts" :key="product.id" class="product-item">
               <div class="product-image">
-                <img 
-                  :src="product.images[0] || '/placeholder.jpg'" 
-                  :alt="product.name"
-                >
+                <img :src="product.images[0] || '/placeholder.jpg'" :alt="product.name">
               </div>
               <div class="product-info">
                 <div class="product-name">{{ product.name }}</div>
@@ -326,7 +294,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Quick Management -->
         <div class="section-card">
           <div class="section-header">
@@ -335,38 +303,31 @@
               <h6>Quick Management</h6>
             </div>
           </div>
-          
+
           <div class="management-grid">
-            <router-link 
-              to="/admin/products" 
-              class="management-item"
-            >
+            <router-link to="/admin/products" class="management-item">
               <Package2 class="management-icon" />
               <span>Products</span>
             </router-link>
-            
-            <router-link 
-              to="/admin/orders" 
-              class="management-item"
-            >
+
+            <router-link to="/admin/orders" class="management-item">
               <Receipt class="management-icon" />
               <span>Orders</span>
             </router-link>
-            
-            <router-link 
-              to="/admin/users" 
-              class="management-item"
-            >
+
+            <router-link to="/admin/users" class="management-item">
               <Users class="management-icon" />
               <span>Users</span>
             </router-link>
-            
-            <router-link 
-              to="/admin/categories" 
-              class="management-item"
-            >
+
+            <router-link to="/admin/categories" class="management-item">
               <Grid3X3 class="management-icon" />
               <span>Categories</span>
+            </router-link>
+
+            <router-link to="/admin/loyalty" class="management-item loyalty-item">
+              <Star class="management-icon" />
+              <span>Loyalty Points</span>
             </router-link>
           </div>
         </div>
@@ -448,11 +409,11 @@ let chartInstance = null
 
 const fetchDashboardData = async () => {
   loading.value = true
-  
+
   try {
     const response = await adminService.getDashboardStats()
     stats.value = response.data
-    
+
     await nextTick()
     createRevenueChart()
   } catch (error) {
@@ -470,7 +431,7 @@ const fetchNotificationData = async () => {
       page: 1
     })
     recentNotifications.value = notificationsResponse.data
-    
+
     notificationStats.value = {
       total: notificationsResponse.meta.total,
       delivered: Math.floor(notificationsResponse.meta.total * 0.7),
@@ -548,7 +509,7 @@ const sendTestNotification = async () => {
       priority: 'MEDIUM',
       isGlobal: true
     })
-    
+
     toast.success('Test notification sent!')
     fetchNotificationData()
   } catch (error) {
@@ -563,14 +524,14 @@ const viewNotificationAnalytics = () => {
 
 const createRevenueChart = () => {
   if (!revenueChart.value) return
-  
+
   if (chartInstance) {
     chartInstance.destroy()
   }
-  
+
   const ctx = revenueChart.value.getContext('2d')
   const data = stats.value.revenueByMonth.slice(-6)
-  
+
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
@@ -632,7 +593,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  
+
   h4 {
     margin: 0;
     color: #2c3e50;
@@ -657,19 +618,19 @@ onMounted(async () => {
   background: white;
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   gap: 20px;
   position: relative;
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  
+
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   }
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -678,34 +639,34 @@ onMounted(async () => {
     width: 4px;
     height: 100%;
   }
-  
+
   &.blue {
     color: #1976d2;
-    
+
     &::before {
       background: #1976d2;
     }
   }
-  
+
   &.green {
     color: #388e3c;
-    
+
     &::before {
       background: #388e3c;
     }
   }
-  
+
   &.orange {
     color: #f57c00;
-    
+
     &::before {
       background: #f57c00;
     }
   }
-  
+
   &.purple {
     color: #7b1fa2;
-    
+
     &::before {
       background: #7b1fa2;
     }
@@ -719,39 +680,39 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   .stat-icon-svg {
     width: 28px;
     height: 28px;
   }
-  
+
   .stat-card.blue & {
     background: rgba(25, 118, 210, 0.1);
-    
+
     .stat-icon-svg {
       color: #1976d2;
     }
   }
-  
+
   .stat-card.green & {
     background: rgba(56, 142, 60, 0.1);
-    
+
     .stat-icon-svg {
       color: #388e3c;
     }
   }
-  
+
   .stat-card.orange & {
     background: rgba(245, 124, 0, 0.1);
-    
+
     .stat-icon-svg {
       color: #f57c00;
     }
   }
-  
+
   .stat-card.purple & {
     background: rgba(123, 31, 162, 0.1);
-    
+
     .stat-icon-svg {
       color: #7b1fa2;
     }
@@ -782,15 +743,15 @@ onMounted(async () => {
   gap: 4px;
   font-size: 0.8rem;
   font-weight: 600;
-  
+
   &.positive {
     color: #28a745;
   }
-  
+
   &.neutral {
     color: #6c757d;
   }
-  
+
   .trend-icon {
     width: 16px;
     height: 16px;
@@ -801,7 +762,7 @@ onMounted(async () => {
   background: white;
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   margin-bottom: 24px;
 }
 
@@ -818,14 +779,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  
+
   .section-icon {
     color: #1976d2;
     width: 24px;
     height: 24px;
   }
-  
-  h5, h6 {
+
+  h5,
+  h6 {
     margin: 0;
     color: #2c3e50;
     font-weight: 600;
@@ -839,7 +801,7 @@ onMounted(async () => {
     gap: 16px;
     margin-bottom: 24px;
   }
-  
+
   .mini-stat {
     display: flex;
     align-items: center;
@@ -848,7 +810,7 @@ onMounted(async () => {
     background: #f8f9fa;
     border-radius: 8px;
   }
-  
+
   .mini-stat-icon {
     width: 40px;
     height: 40px;
@@ -856,40 +818,40 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    
+
     &.blue {
       background: rgba(25, 118, 210, 0.1);
       color: #1976d2;
     }
-    
+
     &.green {
       background: rgba(56, 142, 60, 0.1);
       color: #388e3c;
     }
-    
+
     &.orange {
       background: rgba(245, 124, 0, 0.1);
       color: #f57c00;
     }
-    
+
     &.purple {
       background: rgba(123, 31, 162, 0.1);
       color: #7b1fa2;
     }
-    
+
     .mini-stat-icon-svg {
       width: 20px;
       height: 20px;
     }
   }
-  
+
   .mini-stat-number {
     font-size: 1.5rem;
     font-weight: 700;
     color: #2c3e50;
     line-height: 1;
   }
-  
+
   .mini-stat-label {
     font-size: 0.8rem;
     color: #6c757d;
@@ -915,43 +877,43 @@ onMounted(async () => {
   text-decoration: none;
   transition: all 0.2s ease;
   cursor: pointer;
-  
+
   &.primary {
     background: #1976d2;
     color: white;
-    
+
     &:hover {
       background: #1565c0;
     }
   }
-  
+
   &.success {
     background: #28a745;
     color: white;
-    
+
     &:hover {
       background: #218838;
     }
   }
-  
+
   &.info {
     background: #17a2b8;
     color: white;
-    
+
     &:hover {
       background: #138496;
     }
   }
-  
+
   &.warning {
     background: #ffc107;
     color: #212529;
-    
+
     &:hover {
       background: #e0a800;
     }
   }
-  
+
   .action-icon {
     width: 18px;
     height: 18px;
@@ -976,7 +938,7 @@ onMounted(async () => {
   gap: 16px;
   padding: 16px 0;
   border-bottom: 1px solid #f0f0f0;
-  
+
   &:last-child {
     border-bottom: none;
   }
@@ -990,32 +952,32 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  
+
   &.success {
     background: rgba(40, 167, 69, 0.1);
     color: #28a745;
   }
-  
+
   &.warning {
     background: rgba(255, 193, 7, 0.1);
     color: #ffc107;
   }
-  
+
   &.info {
     background: rgba(23, 162, 184, 0.1);
     color: #17a2b8;
   }
-  
+
   &.secondary {
     background: rgba(108, 117, 125, 0.1);
     color: #6c757d;
   }
-  
+
   &.danger {
     background: rgba(220, 53, 69, 0.1);
     color: #dc3545;
   }
-  
+
   .notification-type-icon {
     width: 20px;
     height: 20px;
@@ -1050,18 +1012,18 @@ onMounted(async () => {
   gap: 12px;
   font-size: 0.8rem;
   color: #6c757d;
-  
+
   .time {
     color: #1976d2;
     font-weight: 500;
   }
-  
+
   .type {
     background: #e9ecef;
     padding: 2px 8px;
     border-radius: 12px;
   }
-  
+
   .recipients {
     font-style: italic;
   }
@@ -1075,11 +1037,11 @@ onMounted(async () => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  
+
   &.active {
     background: #28a745;
   }
-  
+
   &.inactive {
     background: #dc3545;
   }
@@ -1103,7 +1065,7 @@ onMounted(async () => {
 .orders-table {
   width: 100%;
   border-collapse: collapse;
-  
+
   th {
     text-align: left;
     padding: 12px 16px;
@@ -1112,13 +1074,13 @@ onMounted(async () => {
     font-weight: 600;
     border-bottom: 2px solid #e9ecef;
   }
-  
+
   td {
     padding: 16px;
     border-bottom: 1px solid #f0f0f0;
     vertical-align: middle;
   }
-  
+
   tr:hover {
     background: #f8f9fa;
   }
@@ -1136,7 +1098,7 @@ onMounted(async () => {
     color: #2c3e50;
     margin-bottom: 2px;
   }
-  
+
   .customer-email {
     font-size: 0.8rem;
     color: #6c757d;
@@ -1156,27 +1118,27 @@ onMounted(async () => {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  
+
   &.pending {
     background: rgba(255, 193, 7, 0.2);
     color: #856404;
   }
-  
+
   &.processing {
     background: rgba(23, 162, 184, 0.2);
     color: #0c5460;
   }
-  
+
   &.shipped {
     background: rgba(40, 167, 69, 0.2);
     color: #155724;
   }
-  
+
   &.delivered {
     background: rgba(40, 167, 69, 0.3);
     color: #155724;
   }
-  
+
   &.cancelled {
     background: rgba(220, 53, 69, 0.2);
     color: #721c24;
@@ -1206,7 +1168,7 @@ onMounted(async () => {
   gap: 16px;
   padding: 16px 0;
   border-bottom: 1px solid #f0f0f0;
-  
+
   &:last-child {
     border-bottom: none;
   }
@@ -1218,7 +1180,7 @@ onMounted(async () => {
   border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
-  
+
   img {
     width: 100%;
     height: 100%;
@@ -1228,14 +1190,14 @@ onMounted(async () => {
 
 .product-info {
   flex: 1;
-  
+
   .product-name {
     font-weight: 500;
     color: #2c3e50;
     margin-bottom: 4px;
     line-height: 1.3;
   }
-  
+
   .product-sales {
     font-size: 0.8rem;
     color: #6c757d;
@@ -1265,19 +1227,19 @@ onMounted(async () => {
   text-decoration: none;
   color: #2c3e50;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background: #e9ecef;
     transform: translateY(-2px);
     color: #1976d2;
   }
-  
+
   .management-icon {
     width: 32px;
     height: 32px;
     color: #1976d2;
   }
-  
+
   span {
     font-weight: 500;
     font-size: 0.9rem;
@@ -1288,14 +1250,14 @@ onMounted(async () => {
   text-align: center;
   padding: 40px 20px;
   color: #6c757d;
-  
+
   .empty-icon {
     width: 48px;
     height: 48px;
     margin: 0 auto 12px;
     opacity: 0.5;
   }
-  
+
   p {
     margin: 0;
     font-size: 0.9rem;
@@ -1311,6 +1273,7 @@ onMounted(async () => {
 
 // Responsive Design
 @media (max-width: 1200px) {
+
   .content-grid,
   .bottom-grid {
     grid-template-columns: 1fr;
@@ -1321,58 +1284,58 @@ onMounted(async () => {
   .admin-dashboard {
     padding: 16px 0;
   }
-  
+
   .dashboard-header {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .stat-card {
     padding: 20px;
   }
-  
+
   .stat-number {
     font-size: 1.8rem;
   }
-  
+
   .section-card {
     padding: 20px;
     margin-bottom: 20px;
   }
-  
+
   .section-header {
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
   }
-  
+
   .notification-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .quick-actions {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .management-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .orders-table {
     font-size: 0.9rem;
-    
+
     th,
     td {
       padding: 12px;
     }
   }
-  
+
   .customer-info {
     .customer-email {
       display: none;
@@ -1381,23 +1344,24 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
+
   .notification-stats,
   .quick-actions {
     grid-template-columns: 1fr;
   }
-  
+
   .stat-card {
     flex-direction: column;
     text-align: center;
     gap: 16px;
   }
-  
+
   .notification-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .notification-meta {
     flex-direction: column;
     gap: 4px;
@@ -1415,6 +1379,7 @@ onMounted(async () => {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

@@ -1,4 +1,4 @@
-// src/users/users.service.ts
+// src/users/users.service.ts - FIXED VERSION
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -13,7 +13,6 @@ export class UsersService {
   async create(createUserDto: CreateUserDto) {
     const { email, password, ...userData } = createUserDto;
 
-    // Check if user exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -22,10 +21,8 @@ export class UsersService {
       throw new ConflictException('Email already exists');
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
     const user = await this.prisma.user.create({
       data: {
         ...userData,
@@ -39,6 +36,7 @@ export class UsersService {
         phone: true,
         avatar: true,
         role: true,
+        loyaltyPoints: true, // ✅ FIXED: Include loyalty points
         createdAt: true,
         updatedAt: true,
       },
@@ -56,6 +54,7 @@ export class UsersService {
         phone: true,
         avatar: true,
         role: true,
+        loyaltyPoints: true, // ✅ FIXED: Include loyalty points
         createdAt: true,
         _count: {
           select: {
@@ -71,6 +70,7 @@ export class UsersService {
     });
   }
 
+  // ✅ FIXED: Include loyaltyPoints in profile response
   async findOne(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -78,9 +78,10 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
-        phone: true, // Make sure phone is included
+        phone: true,
         avatar: true,
         role: true,
+        loyaltyPoints: true, // ✅ CRITICAL FIX: Include loyalty points
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -97,13 +98,15 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    console.log('👤 User profile retrieved:', { ...user, phone: user.phone }); // Debug log
+    console.log('👤 User profile retrieved with loyalty points:', { 
+      ...user, 
+      loyaltyPoints: user.loyaltyPoints 
+    });
 
     return user;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    // If password is being updated, hash it
     if (updateUserDto.password) {
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
     }
@@ -119,6 +122,7 @@ export class UsersService {
           phone: true,
           avatar: true,
           role: true,
+          loyaltyPoints: true, // ✅ FIXED: Include loyalty points
           updatedAt: true,
         },
       });
@@ -137,6 +141,7 @@ export class UsersService {
       select: {
         id: true,
         avatar: true,
+        loyaltyPoints: true, // ✅ FIXED: Include loyalty points
       },
     });
   }
@@ -144,7 +149,6 @@ export class UsersService {
   async changePassword(id: string, changePasswordDto: ChangePasswordDto) {
     const { currentPassword, newPassword } = changePasswordDto;
 
-    // Get user with password
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -157,16 +161,13 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    // Verify current password
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isCurrentPasswordValid) {
       throw new BadRequestException('Current password is incorrect');
     }
 
-    // Hash new password
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password
     await this.prisma.user.update({
       where: { id },
       data: { password: hashedNewPassword },

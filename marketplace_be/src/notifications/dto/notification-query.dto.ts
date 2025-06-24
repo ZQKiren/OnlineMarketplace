@@ -6,7 +6,7 @@ export class NotificationQueryDto {
   @IsOptional()
   @Type(() => Number)
   @Transform(({ value }) => {
-    // ✅ FIX: Ensure page is at least 1
+    
     const parsed = parseInt(value);
     return isNaN(parsed) || parsed < 1 ? 1 : parsed;
   })
@@ -17,7 +17,7 @@ export class NotificationQueryDto {
   @IsOptional()
   @Type(() => Number)
   @Transform(({ value }) => {
-    // ✅ FIX: Ensure limit is valid
+    
     const parsed = parseInt(value);
     return isNaN(parsed) || parsed < 1 ? 20 : Math.min(parsed, 100);
   })
@@ -28,7 +28,7 @@ export class NotificationQueryDto {
   @IsOptional()
   @IsEnum(NotificationType)
   @Transform(({ value }) => {
-    // ✅ FIX: Transform empty string to undefined
+  
     if (value === '' || value === null || value === undefined) {
       return undefined;
     }
@@ -39,7 +39,7 @@ export class NotificationQueryDto {
   @IsOptional()
   @IsString()
   @Transform(({ value }) => {
-    // ✅ FIX: Transform empty string to undefined
+    
     if (value === '' || value === null || value === undefined) {
       return undefined;
     }

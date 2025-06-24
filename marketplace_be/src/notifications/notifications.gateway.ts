@@ -16,7 +16,7 @@ import { JwtService } from '@nestjs/jwt';
     methods: ['GET', 'POST'],
     credentials: true,
   },
-  // ❌ Remove this: namespace: '/notifications',
+  
 })
 export class NotificationGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -30,7 +30,6 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
     try {
       console.log(`🔌 New socket connection: ${client.id}`);
       
-      // ✅ FIX: Multiple ways to get token
       const token = client.handshake.auth?.token || 
                    client.handshake.headers?.authorization?.replace('Bearer ', '') ||
                    client.request?.headers?.authorization?.replace('Bearer ', '');

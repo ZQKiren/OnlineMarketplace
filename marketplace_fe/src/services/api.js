@@ -1,4 +1,4 @@
-// src/services/api.js
+// src/services/api.js - FIXED VERSION WITHOUT ALERT POPUP
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
@@ -12,7 +12,7 @@ api.interceptors.request.use(
   (config) => {
     const authStore = useAuthStore()
     
-    // ✅ FIX: Try auth store first, fallback to localStorage
+    // ✅ Try auth store first, fallback to localStorage
     let token = authStore.token
     if (!token) {
       token = localStorage.getItem('token')
@@ -32,20 +32,64 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor for error handling
+// ✅ ENHANCED Response interceptor WITHOUT ALERT POPUP
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const authStore = useAuthStore()
     
+    console.log('🔍 API Error Response:', {
+      status: error.response?.status,
+      message: error.response?.data?.message,
+      blocked: error.response?.data?.blocked,
+      url: error.config?.url
+    })
+
+    // ✅ Handle blocked user (403 Forbidden)
+    if (error.response?.status === 403) {
+      const message = error.response.data?.message
+      
+      // Check if it's a blocked user error
+      if (message && (
+        message.includes('blocked') ||
+        message.includes('Blocked') ||
+        error.response.data?.blocked === true
+      )) {
+        console.log('🚫 User account blocked - forcing logout')
+        
+        // Set blocked flag for better error handling
+        error.response.data.blocked = true
+        
+        // Clear auth data immediately
+        authStore.logout()
+        localStorage.removeItem('token')
+        
+        // ✅ REMOVED: alert() popup - only use toast now
+        // Toast will be shown in auth store or components
+        
+        // Redirect to login with blocked flag
+        if (typeof window !== 'undefined' && window.location && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login?blocked=true'
+        }
+        
+        return Promise.reject(error)
+      }
+    }
+    
+    // ✅ Handle regular 401 unauthorized
     if (error.response?.status === 401) {
-      // ✅ FIX: Clear both auth store and localStorage
+      console.log('🔓 Unauthorized - clearing auth')
+      
+      // Clear both auth store and localStorage
       authStore.logout()
       localStorage.removeItem('token')
       
-      // ✅ FIX: Only redirect if not already on login page
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login'
+      // Only redirect if not already on auth pages
+      if (typeof window !== 'undefined' && window.location) {
+        const pathname = window.location.pathname
+        if (!pathname.includes('/login') && !pathname.includes('/register')) {
+          window.location.href = '/login'
+        }
       }
     }
     
@@ -53,18 +97,14 @@ api.interceptors.response.use(
   }
 )
 
-// Updated function for Cloudinary-only URLs with debugging
+// Updated function for Cloudinary-only URLs
 export const getStaticUrl = (imagePath) => {
-  console.log('🔍 getStaticUrl input:', imagePath)
-  
   if (!imagePath) {
-    console.log('❌ No image path provided')
     return null
   }
   
   // If it's already a full Cloudinary URL, return as is
   if (imagePath.startsWith('https://res.cloudinary.com/')) {
-    console.log('✅ Full Cloudinary URL detected')
     return imagePath
   }
   
@@ -73,18 +113,15 @@ export const getStaticUrl = (imagePath) => {
     // Get cloud name from env or use default
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'your-cloud-name'
     const fullUrl = `https://res.cloudinary.com/${cloudName}/image/upload/marketplace/${imagePath}`
-    console.log('🔧 Constructed Cloudinary URL:', fullUrl)
     return fullUrl
   }
   
   // If it's a relative path (legacy data), it should now be invalid
   if (imagePath.startsWith('/uploads/')) {
-    console.warn('⚠️ Legacy local path detected:', imagePath)
     return null // Return null to trigger placeholder
   }
   
   // If it's some other format, assume it's already a valid URL
-  console.log('🤔 Unknown format, returning as-is:', imagePath)
   return imagePath
 }
 

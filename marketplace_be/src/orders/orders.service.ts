@@ -1,15 +1,20 @@
 // src/orders/orders.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { LoyaltyService } from '../loyalty/loyalty.service'; 
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderStatus, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client'; // ✅ THÊM Prisma import
+import { OrderStatus, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => LoyaltyService)) 
+    private loyaltyService: LoyaltyService,
+  ) {}
 
   async create(userId: string, createOrderDto: CreateOrderDto) {
-    const { items, paymentMethod = 'card', shippingAddress } = createOrderDto;
+    const { items, paymentMethod = 'card', shippingAddress, redemptionId } = createOrderDto; 
 
     // Validate products and calculate total
     let totalAmount = 0;
@@ -36,6 +41,24 @@ export class OrdersService {
       });
     }
 
+    // ✨ NEW: Handle loyalty redemption if provided
+    let discountAmount = 0;
+    let redemptionData: { redemption: { pointsCost: number }, discountAmount: number } | null = null;
+
+    if (redemptionId) {
+      try {
+        redemptionData = await this.loyaltyService.redeemPoints(userId, {
+          redemptionId,
+          orderValue: totalAmount,
+        });
+        discountAmount = redemptionData.discountAmount;
+      } catch (error) {
+        throw new BadRequestException(`Loyalty redemption failed: ${error.message}`);
+      }
+    }
+
+    const finalAmount = Math.max(0, totalAmount - discountAmount); 
+
     // Create order with transaction
     const order = await this.prisma.$transaction(async (tx) => {
       // Create order
@@ -43,8 +66,10 @@ export class OrdersService {
         data: {
           userId,
           totalAmount,
-          paymentMethod: paymentMethod.toUpperCase() as PaymentMethod, // Convert to enum
-          shippingAddress: shippingAddress ? (shippingAddress as unknown as Prisma.InputJsonValue) : Prisma.JsonNull, // ✅ FIX: Cast to Prisma.InputJsonValue
+          discountAmount, 
+          finalAmount, 
+          paymentMethod: paymentMethod.toUpperCase() as PaymentMethod,
+          shippingAddress: shippingAddress ? (shippingAddress as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
           items: {
             create: orderItems,
           },
@@ -57,6 +82,19 @@ export class OrdersService {
           },
         },
       });
+
+      // ✨ NEW: Link redemption to order if used
+      if (redemptionData && redemptionId) {
+        await tx.userLoyaltyRedemption.create({
+          data: {
+            userId,
+            redemptionId: redemptionId,
+            orderId: newOrder.id,
+            pointsUsed: redemptionData.redemption.pointsCost,
+            discountApplied: discountAmount,
+          },
+        });
+      }
 
       // Update product stock
       for (const item of orderItems) {
@@ -72,13 +110,12 @@ export class OrdersService {
 
       // Create payment record based on payment method
       if (paymentMethod === 'cod') {
-        // For COD, create payment record with PENDING status
         await tx.payment.create({
           data: {
             orderId: newOrder.id,
-            amount: totalAmount,
+            amount: finalAmount, // ✨ UPDATED: Use final amount instead of total
             method: 'COD',
-            status: PaymentStatus.PENDING, // Will be updated when delivered
+            status: PaymentStatus.PENDING,
           },
         });
       }
@@ -121,6 +158,16 @@ export class OrdersService {
           },
         },
         payment: true,
+        userRedemptions: { // ✨ NEW: Include redemption info
+          include: {
+            redemption: {
+              select: {
+                title: true,
+                discountType: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -158,6 +205,12 @@ export class OrdersService {
           },
         },
         payment: true,
+        loyaltyTransactions: true, // ✨ NEW: Include loyalty transactions
+        userRedemptions: { // ✨ NEW: Include redemption data
+          include: {
+            redemption: true,
+          },
+        },
       },
     });
 
@@ -173,6 +226,7 @@ export class OrdersService {
     return order;
   }
 
+  // ✨ UPDATED: Update order status with loyalty points integration
   async updateStatus(id: string, status: OrderStatus, isAdmin: boolean) {
     if (!isAdmin) {
       throw new BadRequestException('Only admin can update order status');
@@ -182,6 +236,7 @@ export class OrdersService {
       where: { id },
       include: {
         payment: true,
+        user: true, // ✨ NEW: Include user for loyalty points
       },
     });
 
@@ -203,6 +258,20 @@ export class OrdersService {
           payment: true,
         },
       });
+
+      // ✨ NEW: Award loyalty points when order is delivered
+      if (status === OrderStatus.DELIVERED && order.loyaltyPointsEarned === 0) {
+        try {
+          await this.loyaltyService.awardOrderPoints(
+            order.userId,
+            order.id,
+            order.finalAmount || order.totalAmount, // Use final amount (after discounts)
+          );
+        } catch (error) {
+          console.error('Error awarding loyalty points:', error);
+          // Don't fail the entire transaction if loyalty points fail
+        }
+      }
 
       // If COD order is marked as DELIVERED, mark payment as COMPLETED
       if (
@@ -238,6 +307,16 @@ export class OrdersService {
           },
         },
         payment: true,
+        userRedemptions: { // ✨ NEW: Include redemption data
+          include: {
+            redemption: {
+              select: {
+                title: true,
+                pointsCost: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -245,7 +324,6 @@ export class OrdersService {
     });
   }
 
-  // Method to mark COD payment as completed manually
   async completeCODPayment(orderId: string, isAdmin: boolean) {
     if (!isAdmin) {
       throw new BadRequestException('Only admin can complete COD payments');

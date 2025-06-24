@@ -39,7 +39,6 @@ enum PaymentMethod {
   COD
 }
 
-// ✨ NEW: Chat related enums
 enum MessageType {
   TEXT
   IMAGE
@@ -69,6 +68,20 @@ enum NotificationPriority {
   URGENT
 }
 
+enum LoyaltyTransactionType {
+  EARN
+  REDEEM
+  BONUS
+  PENALTY
+  EXPIRED
+}
+
+enum LoyaltyTransactionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
@@ -77,8 +90,10 @@ model User {
   phone        String?
   avatar       String?
   role         Role      @default(USER)
-  isOnline     Boolean   @default(false)  // ✨ NEW: Online status
-  lastSeen     DateTime? // ✨ NEW: Last seen timestamp
+  isBlocked    Boolean   @default(false)
+  isOnline     Boolean   @default(false)
+  lastSeen     DateTime? 
+  loyaltyPoints Int      @default(0) 
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   
@@ -93,8 +108,14 @@ model User {
 
   preferences  UserPreference[]
   productViews ProductView[]
-
   notificationReads NotificationRead[]
+
+  loyaltyTransactions   LoyaltyTransaction[]
+  userLoyaltyRedemptions UserLoyaltyRedemption[]
+
+  @@index([email])
+  @@index([loyaltyPoints])
+  @@index([isBlocked])
 }
 
 model Category {
@@ -126,9 +147,12 @@ model Product {
   cartItems    CartItem[]
   orderItems   OrderItem[]
   views        ProductView[]
-  
-  // ✨ NEW: Chat relationship
   chats        Chat[]
+
+  @@index([categoryId])
+  @@index([sellerId])
+  @@index([price])
+  @@index([createdAt])
 }
 
 model CartItem {
@@ -143,22 +167,33 @@ model CartItem {
   product      Product   @relation(fields: [productId], references: [id])
   
   @@unique([userId, productId])
+  @@index([userId])
 }
 
 model Order {
   id              String        @id @default(uuid())
   userId          String
   totalAmount     Float
+  discountAmount  Float?        @default(0) 
+  finalAmount     Float?        
   status          OrderStatus   @default(PENDING)
   paymentMethod   PaymentMethod @default(CARD)
   shippingAddress Json?
   paymentId       String?       @unique
+  loyaltyPointsEarned Int?       @default(0) 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   
   user            User          @relation(fields: [userId], references: [id])
   items           OrderItem[]
   payment         Payment?
+
+  loyaltyTransactions LoyaltyTransaction[]
+  userRedemptions     UserLoyaltyRedemption[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -171,6 +206,9 @@ model OrderItem {
   
   order        Order     @relation(fields: [orderId], references: [id])
   product      Product   @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 model Payment {
@@ -184,6 +222,8 @@ model Payment {
   updatedAt        DateTime      @updatedAt
   
   order            Order         @relation(fields: [orderId], references: [id])
+
+  @@index([status])
 }
 
 model Review {
@@ -199,9 +239,10 @@ model Review {
   product      Product   @relation(fields: [productId], references: [id])
   
   @@unique([userId, productId])
+  @@index([productId])
+  @@index([rating])
 }
 
-// ✨ NEW: Chat Models
 model Chat {
   id           String      @id @default(uuid())
   productId    String
@@ -217,7 +258,9 @@ model Chat {
   seller       User        @relation("SellerChats", fields: [sellerId], references: [id])
   messages     Message[]
   
-  @@unique([productId, buyerId]) // One chat per product per buyer
+  @@unique([productId, buyerId])
+  @@index([buyerId])
+  @@index([sellerId])
 }
 
 model Message {
@@ -232,13 +275,16 @@ model Message {
   
   chat         Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
   sender       User        @relation(fields: [senderId], references: [id])
+
+  @@index([chatId])
+  @@index([senderId])
 }
 
 model UserPreference {
   id         String   @id @default(uuid())
   userId     String
   categoryId String
-  score      Float    @default(1.0) // Điểm sở thích (1-5)
+  score      Float    @default(1.0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -254,11 +300,14 @@ model ProductView {
   userId    String?
   productId String
   viewedAt  DateTime @default(now())
-  sessionId String? // For anonymous users
+  sessionId String?
 
   user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([productId])
+  @@index([viewedAt])
   @@map("product_views")
 }
 
@@ -268,16 +317,18 @@ model Notification {
   message     String
   type        NotificationType
   priority    NotificationPriority @default(MEDIUM)
-  isGlobal    Boolean              @default(false) // true = gửi cho tất cả users
-  targetUsers String[]             // array user IDs (nếu không global)
-  metadata    Json?                // thông tin bổ sung (productId, orderId, etc.)
+  isGlobal    Boolean              @default(false)
+  targetUsers String[]
+  metadata    Json?
   isActive    Boolean              @default(true)
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
   
-  // Quan hệ với notification reads
   reads       NotificationRead[]
   
+  @@index([isGlobal])
+  @@index([isActive])
+  @@index([createdAt])
   @@map("notifications")
 }
 
@@ -293,5 +344,75 @@ model NotificationRead {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([notificationId, userId])
+  @@index([userId])
   @@map("notification_reads")
+}
+
+// ✅ LOYALTY MODELS
+
+model LoyaltyTransaction {
+  id          String                    @id @default(uuid())
+  userId      String
+  orderId     String?
+  type        LoyaltyTransactionType
+  status      LoyaltyTransactionStatus  @default(COMPLETED)
+  points      Int                       
+  description String
+  metadata    Json?
+  expiresAt   DateTime?                 
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  user        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order       Order?                    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([expiresAt]) 
+  @@index([createdAt])
+  @@map("loyalty_transactions")
+}
+
+model LoyaltyRedemption {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  pointsCost  Int
+  discountType String   
+  discountValue Float?
+  minOrderValue Float?
+  maxUses     Int?
+  usageCount  Int       @default(0)
+  isActive    Boolean   @default(true)
+  validFrom   DateTime  @default(now())
+  validUntil  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userRedemptions UserLoyaltyRedemption[]
+
+  @@index([isActive])
+  @@index([pointsCost])
+  @@index([validFrom, validUntil]) 
+  @@map("loyalty_redemptions")
+}
+
+model UserLoyaltyRedemption {
+  id            String           @id @default(uuid())
+  userId        String
+  redemptionId  String
+  orderId       String?
+  pointsUsed    Int
+  discountApplied Float
+  usedAt        DateTime         @default(now())
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  redemption    LoyaltyRedemption @relation(fields: [redemptionId], references: [id], onDelete: Cascade)
+  order         Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([redemptionId])
+  @@index([usedAt])
+  @@map("user_loyalty_redemptions")
 }

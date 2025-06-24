@@ -18,5 +18,4 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  // Removed profile endpoint - use /users/profile instead
 }

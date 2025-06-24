@@ -16,14 +16,6 @@ export default {
     return api.get(`/admin/users/${userId}`)
   },
 
-  createUser(userData) {
-    return api.post('/admin/users', userData)
-  },
-
-  updateUser(userId, userData) {
-    return api.patch(`/admin/users/${userId}`, userData)
-  },
-
   deleteUser(userId) {
     return api.delete(`/admin/users/${userId}`)
   },

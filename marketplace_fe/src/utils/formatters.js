@@ -1,8 +1,10 @@
 // src/utils/formatters.js
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import localizedFormat from 'dayjs/plugin/localizedFormat'
 
 dayjs.extend(relativeTime)
+dayjs.extend(localizedFormat)
 
 export const formatDate = (date) => {
   return dayjs(date).format('MMM DD, YYYY')
@@ -10,6 +12,10 @@ export const formatDate = (date) => {
 
 export const formatDateTime = (date) => {
   return dayjs(date).format('MMM DD, YYYY HH:mm')
+}
+
+export const formatTime = (date) => {
+  return dayjs(date).format('HH:mm')
 }
 
 export const formatRelativeTime = (date) => {
@@ -173,10 +179,43 @@ export const formatErrorMessage = (error) => {
   return 'An unexpected error occurred'
 }
 
+// Additional date/time formatters
+export const formatDateShort = (date) => {
+  return dayjs(date).format('MM/DD/YYYY')
+}
+
+export const formatDateLong = (date) => {
+  return dayjs(date).format('MMMM DD, YYYY')
+}
+
+export const formatTimeRange = (startDate, endDate) => {
+  const start = dayjs(startDate)
+  const end = dayjs(endDate)
+  
+  if (start.isSame(end, 'day')) {
+    return `${start.format('MMM DD, YYYY')} ${start.format('HH:mm')} - ${end.format('HH:mm')}`
+  }
+  
+  return `${start.format('MMM DD, YYYY HH:mm')} - ${end.format('MMM DD, YYYY HH:mm')}`
+}
+
+export const formatAge = (birthDate) => {
+  return dayjs().diff(dayjs(birthDate), 'year')
+}
+
+export const formatTimeOnly = (date) => {
+  return dayjs(date).format('h:mm A')
+}
+
+export const formatDateTimeLocale = (date, locale = 'en') => {
+  return dayjs(date).locale(locale).format('LLL')
+}
+
 // Export all formatters as a single object for convenience
 export default {
   formatDate,
   formatDateTime,
+  formatTime,
   formatRelativeTime,
   formatPrice,
   formatStatus,
@@ -194,5 +233,11 @@ export default {
   formatAddress,
   formatName,
   formatSlug,
-  formatErrorMessage
+  formatErrorMessage,
+  formatDateShort,
+  formatDateLong,
+  formatTimeRange,
+  formatAge,
+  formatTimeOnly,
+  formatDateTimeLocale
 }

@@ -1,4 +1,4 @@
-<!-- src/views/orders/OrderDetail.vue -->
+<!-- src/views/orders/OrderDetail.vue - UPDATED with Loyalty Integration and Lucide Icons -->
 <template>
   <div class="container" v-if="order">
     <div class="row">
@@ -20,7 +20,7 @@
           <h5>Order Status</h5>
           <div class="current-status">
             <div class="status-badge" :class="order.status.toLowerCase()">
-              <i class="material-icons">{{ getCurrentStatusIcon() }}</i>
+              <component :is="getCurrentStatusIcon()" :size="20" />
               <span>{{ formatOrderStatus(order.status) }}</span>
             </div>
             <p class="status-description">{{ getStatusDescription() }}</p>
@@ -37,7 +37,7 @@
               }"
             >
               <div class="step-icon">
-                <i class="material-icons">{{ status.icon }}</i>
+                <component :is="status.icon" :size="24" />
               </div>
               <div class="step-info">
                 <h6>{{ status.label }}</h6>
@@ -49,6 +49,105 @@
             </div>
           </div>
         </div>
+
+        <!-- ✨ NEW: Loyalty Points Summary Card -->
+        <div v-if="authStore.isAuthenticated && (order.loyaltyPointsEarned > 0 || order.loyaltyPointsRedeemed > 0)" class="custom-card loyalty-summary-card">
+          <div class="loyalty-card-header">
+            <h5>
+              <Star :size="24" />
+              Loyalty Points Summary
+            </h5>
+            <div class="loyalty-status-badge" :class="order.status.toLowerCase()">
+              {{ getLoyaltyStatusText() }}
+            </div>
+          </div>
+          
+          <div class="loyalty-summary-content">
+            <div class="loyalty-metrics">
+              <!-- Points Earned -->
+              <div v-if="order.loyaltyPointsEarned > 0" class="loyalty-metric earned">
+                <div class="metric-icon">
+                  <TrendingUp :size="20" />
+                </div>
+                <div class="metric-content">
+                  <div class="metric-value">+{{ order.loyaltyPointsEarned }}</div>
+                  <div class="metric-label">Points Earned</div>
+                  <div class="metric-description">
+                    {{ (loyaltyStore.earnRate * 100).toFixed(0) }}% back on ${{ order.totalAmount.toFixed(2) }}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Points Redeemed -->
+              <div v-if="order.loyaltyPointsRedeemed > 0" class="loyalty-metric redeemed">
+                <div class="metric-icon">
+                  <Gift :size="20" />
+                </div>
+                <div class="metric-content">
+                  <div class="metric-value">-{{ order.loyaltyPointsRedeemed }}</div>
+                  <div class="metric-label">Points Redeemed</div>
+                  <div class="metric-description">
+                    Saved ${{ order.loyaltyDiscountAmount?.toFixed(2) || '0.00' }}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Net Points -->
+              <div class="loyalty-metric net">
+                <div class="metric-icon">
+                  <Wallet :size="20" />
+                </div>
+                <div class="metric-content">
+                  <div class="metric-value" :class="netPointsClass">
+                    {{ netPoints >= 0 ? '+' : '' }}{{ netPoints }}
+                  </div>
+                  <div class="metric-label">Net Points</div>
+                  <div class="metric-description">Total impact on balance</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Points Availability Notice -->
+            <div v-if="order.loyaltyPointsEarned > 0" class="points-availability">
+              <div class="availability-info" :class="pointsAvailabilityClass">
+                <component :is="getPointsAvailabilityIcon()" :size="20" />
+                <div class="availability-text">
+                  <strong>{{ getPointsAvailabilityTitle() }}</strong>
+                  <p>{{ getPointsAvailabilityDescription() }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Review Bonus Opportunity -->
+            <div v-if="order.status === 'DELIVERED' && canEarnReviewBonus" class="review-bonus-opportunity">
+              <div class="bonus-header">
+                <MessageSquare :size="20" />
+                <span>Earn More Points!</span>
+              </div>
+              <p>Write reviews for your purchased items and earn <strong>50 bonus points</strong> for each review!</p>
+              <div class="bonus-actions">
+                <button 
+                  v-for="item in reviewableItems" 
+                  :key="item.id"
+                  @click="reviewProduct(item.product)"
+                  class="btn-small blue waves-effect review-btn"
+                >
+                  <Star :size="16" class="left-icon" />
+                  Review {{ item.product.name }}
+                </button>
+              </div>
+            </div>
+            
+            <!-- Current Balance Display -->
+            <div class="current-balance-display">
+              <router-link to="/loyalty" class="loyalty-dashboard-link">
+                <BarChart :size="20" />
+                <span>Current Balance: {{ loyaltyStore.currentBalance }} points</span>
+                <ArrowRight :size="20" />
+              </router-link>
+            </div>
+          </div>
+        </div>
         
         <!-- Shipping Address (if available) -->
         <div v-if="order.shippingAddress" class="custom-card">
@@ -57,7 +156,7 @@
             <p><strong>{{ order.shippingAddress.fullName }}</strong></p>
             <p>{{ order.shippingAddress.address }}</p>
             <p>{{ order.shippingAddress.city }}, {{ order.shippingAddress.zipCode }}</p>
-            <p><i class="material-icons tiny">phone</i> {{ order.shippingAddress.phone }}</p>
+            <p><Phone :size="16" class="inline-icon" /> {{ order.shippingAddress.phone }}</p>
           </div>
         </div>
         
@@ -84,14 +183,20 @@
                 <p class="item-seller">Sold by: {{ item.product.seller?.name || 'Marketplace' }}</p>
                 <p class="item-price">{{ item.quantity }} × ${{ item.price.toFixed(2) }}</p>
                 
+                <!-- ✨ NEW: Item Points Info -->
+                <div v-if="getItemPoints(item) > 0" class="item-points">
+                  <Star :size="14" />
+                  <span>Earned {{ getItemPoints(item) }} points</span>
+                </div>
+                
                 <!-- Review Button for Delivered Items -->
                 <div v-if="order.status === 'DELIVERED' && canReview" class="item-actions">
                   <button 
                     class="btn-small waves-effect waves-light"
                     @click="reviewProduct(item.product)"
                   >
-                    <i class="material-icons left">star</i>
-                    Review
+                    <Star :size="16" class="left-icon" />
+                    Review & Earn 50 Points
                   </button>
                 </div>
               </div>
@@ -114,9 +219,34 @@
               <span>Tax (8%)</span>
               <span>${{ calculateTax().toFixed(2) }}</span>
             </div>
+            
+            <!-- ✨ NEW: Loyalty Discount Row -->
+            <div v-if="order.loyaltyDiscountAmount > 0" class="summary-row loyalty-discount">
+              <span class="discount-label">
+                <Gift :size="16" class="inline-icon" />
+                Loyalty Discount
+              </span>
+              <span class="discount-amount">-${{ order.loyaltyDiscountAmount.toFixed(2) }}</span>
+            </div>
+            
             <div class="summary-row total">
               <span>Total</span>
               <span>${{ order.totalAmount.toFixed(2) }}</span>
+            </div>
+            
+            <!-- ✨ NEW: Loyalty Points Summary in Order Total -->
+            <div v-if="order.loyaltyPointsEarned > 0 || order.loyaltyPointsRedeemed > 0" class="loyalty-order-summary">
+              <div class="loyalty-summary-divider"></div>
+              
+              <div v-if="order.loyaltyPointsRedeemed > 0" class="summary-row loyalty-redeemed">
+                <span>Points Used</span>
+                <span class="points-used">{{ order.loyaltyPointsRedeemed }} points</span>
+              </div>
+              
+              <div v-if="order.loyaltyPointsEarned > 0" class="summary-row loyalty-earned">
+                <span>Points Earned</span>
+                <span class="points-earned">+{{ order.loyaltyPointsEarned }} points</span>
+              </div>
             </div>
           </div>
         </div>
@@ -136,10 +266,22 @@
               >
               <div>
                 <p><strong>{{ order.user.name }}</strong></p>
-                <p><i class="material-icons tiny">email</i> {{ order.user.email }}</p>
+                <p><Mail :size="16" class="inline-icon" /> {{ order.user.email }}</p>
                 <p v-if="order.user.phone">
-                  <i class="material-icons tiny">phone</i> {{ order.user.phone }}
+                  <Phone :size="16" class="inline-icon" /> {{ order.user.phone }}
                 </p>
+                
+                <!-- ✨ NEW: Customer Loyalty Status -->
+                <div v-if="authStore.isAuthenticated" class="customer-loyalty-status">
+                  <div class="loyalty-tier">
+                    <Award :size="16" />
+                    <span>{{ getUserLoyaltyTier() }}</span>
+                  </div>
+                  <div class="loyalty-balance">
+                    <Star :size="16" />
+                    <span>{{ loyaltyStore.currentBalance }} points</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -150,11 +292,11 @@
           <h5>Payment Information</h5>
           <div class="info-section">
             <div class="payment-method">
-              <i class="material-icons">{{ getPaymentMethodIcon() }}</i>
+              <component :is="getPaymentMethodIcon()" :size="30" />
               <div>
                 <p><strong>{{ getPaymentMethodDisplay() }}</strong></p>
                 <p class="payment-status" :class="order.payment?.status?.toLowerCase()">
-                  <i class="material-icons tiny">{{ getPaymentStatusIcon() }}</i>
+                  <component :is="getPaymentStatusIcon()" :size="16" class="inline-icon" />
                   {{ formatPaymentStatus(order.payment?.status) }}
                 </p>
               </div>
@@ -169,12 +311,68 @@
             </div>
             
             <div v-if="order.paymentMethod === 'COD'" class="cod-notice">
-              <i class="material-icons">info</i>
+              <Info :size="20" />
               <div>
                 <p><strong>Cash on Delivery</strong></p>
                 <p>Payment will be collected when the order is delivered to your address.</p>
                 <p class="cod-amount">Amount to pay: <strong>${{ order.totalAmount.toFixed(2) }}</strong></p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ✨ NEW: Loyalty Actions Card -->
+        <div v-if="authStore.isAuthenticated && order.status === 'DELIVERED'" class="custom-card loyalty-actions-card">
+          <h5>
+            <Star :size="24" />
+            Loyalty Actions
+          </h5>
+          
+          <div class="loyalty-actions-content">
+            <!-- Reorder with Points Preview -->
+            <div class="loyalty-action-item">
+              <div class="action-info">
+                <h6>Reorder Items</h6>
+                <p>Reorder the same items and earn {{ calculateReorderPoints() }} more points!</p>
+              </div>
+              <button 
+                class="btn blue waves-effect waves-light"
+                @click="reorderItems"
+                :disabled="processing"
+              >
+                <RotateCcw :size="16" class="left-icon" />
+                Reorder
+              </button>
+            </div>
+            
+            <!-- Share & Earn -->
+            <div class="loyalty-action-item">
+              <div class="action-info">
+                <h6>Share Your Purchase</h6>
+                <p>Share this order on social media (feature coming soon)</p>
+              </div>
+              <button 
+                class="btn-flat blue-text waves-effect"
+                @click="shareOrder"
+                disabled
+              >
+                <Share2 :size="16" class="left-icon" />
+                Share Order
+              </button>
+            </div>
+            
+            <!-- Loyalty Program Info -->
+            <div class="loyalty-program-cta">
+              <router-link to="/loyalty" class="loyalty-cta-link">
+                <div class="cta-content">
+                  <TrendingUp :size="24" />
+                  <div>
+                    <strong>Maximize Your Rewards</strong>
+                    <p>View your loyalty dashboard and discover more ways to earn points</p>
+                  </div>
+                </div>
+                <ArrowRight :size="20" />
+              </router-link>
             </div>
           </div>
         </div>
@@ -191,7 +389,7 @@
                 @click="cancelOrder"
                 :disabled="processing"
               >
-                <i class="material-icons left">cancel</i>
+                <X :size="16" class="left-icon" />
                 Cancel Order
               </button>
               
@@ -201,7 +399,7 @@
                 @click="reorderItems"
                 :disabled="processing"
               >
-                <i class="material-icons left">refresh</i>
+                <RotateCcw :size="16" class="left-icon" />
                 Reorder Items
               </button>
             </template>
@@ -236,7 +434,7 @@
                 @click="completeCODPayment"
                 :disabled="processing"
               >
-                <i class="material-icons left">payment</i>
+                <CreditCard :size="16" class="left-icon" />
                 Mark COD as Paid
               </button>
             </template>
@@ -246,16 +444,8 @@
               class="btn-flat waves-effect full-width"
               @click="downloadInvoice"
             >
-              <i class="material-icons left">description</i>
+              <FileText :size="16" class="left-icon" />
               Download Invoice
-            </button>
-            
-            <button 
-              class="btn-flat waves-effect full-width"
-              @click="shareOrder"
-            >
-              <i class="material-icons left">share</i>
-              Share Order
             </button>
           </div>
         </div>
@@ -265,15 +455,15 @@
           <h5>Need Help?</h5>
           <div class="help-links">
             <a href="#" @click.prevent="contactSupport">
-              <i class="material-icons">support_agent</i>
+              <Headphones :size="20" />
               Contact Support
             </a>
             <a href="#" @click.prevent="reportIssue">
-              <i class="material-icons">report_problem</i>
+              <AlertTriangle :size="20" />
               Report an Issue
             </a>
             <a href="#" @click.prevent="trackShipment" v-if="order.status === 'SHIPPED'">
-              <i class="material-icons">local_shipping</i>
+              <Truck :size="20" />
               Track Shipment
             </a>
           </div>
@@ -297,7 +487,7 @@
   
   <div v-else class="container">
     <div class="error-section">
-      <i class="material-icons large">error_outline</i>
+      <AlertCircle :size="64" />
       <h5>Order Not Found</h5>
       <p>The order you're looking for doesn't exist or you don't have permission to view it.</p>
       <router-link to="/orders" class="btn waves-effect waves-light">
@@ -312,16 +502,27 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
+import { useLoyaltyStore } from '@/stores/loyalty' // ✨ NEW
 import { useToast } from 'vue-toastification'
 import orderService from '@/services/order.service'
 import paymentService from '@/services/payment.service'
 import { formatDateTime } from '@/utils/formatters'
 import { getStaticUrl } from '@/services/api'
 
+// Lucide Vue Icons Import
+import { 
+  Star, TrendingUp, Gift, Wallet, CheckCircle, Clock, X, 
+  ShoppingCart, Settings, Truck, CheckCheck, ArrowRight,
+  BarChart, MessageSquare, Phone, Mail, Award, Info,
+  RotateCcw, Share2, CreditCard, FileText, Headphones,
+  AlertTriangle, AlertCircle, Banknote
+} from 'lucide-vue-next'
+
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const cartStore = useCartStore()
+const loyaltyStore = useLoyaltyStore() // ✨ NEW
 const toast = useToast()
 
 const order = ref(null)
@@ -332,10 +533,10 @@ const newStatus = ref('')
 const orderId = computed(() => route.params.id)
 
 const orderStatuses = [
-  { value: 'PENDING', label: 'Order Placed', icon: 'shopping_cart' },
-  { value: 'PROCESSING', label: 'Processing', icon: 'settings' },
-  { value: 'SHIPPED', label: 'Shipped', icon: 'local_shipping' },
-  { value: 'DELIVERED', label: 'Delivered', icon: 'done_all' },
+  { value: 'PENDING', label: 'Order Placed', icon: ShoppingCart },
+  { value: 'PROCESSING', label: 'Processing', icon: Settings },
+  { value: 'SHIPPED', label: 'Shipped', icon: Truck },
+  { value: 'DELIVERED', label: 'Delivered', icon: CheckCheck },
 ]
 
 const adminStatuses = [
@@ -364,16 +565,96 @@ const canReview = computed(() => {
     order.value.status === 'DELIVERED'
 })
 
+// ✨ NEW: Loyalty computed properties
+const netPoints = computed(() => {
+  const earned = order.value?.loyaltyPointsEarned || 0
+  const redeemed = order.value?.loyaltyPointsRedeemed || 0
+  return earned - redeemed
+})
+
+const netPointsClass = computed(() => {
+  if (netPoints.value > 0) return 'positive'
+  if (netPoints.value < 0) return 'negative'
+  return 'neutral'
+})
+
+const pointsAvailabilityClass = computed(() => {
+  if (order.value?.status === 'DELIVERED') return 'available'
+  if (order.value?.status === 'CANCELLED') return 'cancelled'
+  return 'pending'
+})
+
+const canEarnReviewBonus = computed(() => {
+  return order.value?.status === 'DELIVERED' && 
+         order.value?.items?.some(item => !item.hasReviewBonus)
+})
+
+const reviewableItems = computed(() => {
+  return order.value?.items?.filter(item => !item.hasReviewBonus) || []
+})
+
+// ✨ NEW: Loyalty methods
+const getLoyaltyStatusText = () => {
+  if (order.value?.status === 'DELIVERED') return 'Processed'
+  if (order.value?.status === 'CANCELLED') return 'Cancelled'
+  return 'Pending'
+}
+
+const getPointsAvailabilityIcon = () => {
+  switch (pointsAvailabilityClass.value) {
+    case 'available': return CheckCircle
+    case 'cancelled': return X
+    default: return Clock
+  }
+}
+
+const getPointsAvailabilityTitle = () => {
+  switch (pointsAvailabilityClass.value) {
+    case 'available': return 'Points Available in Your Account'
+    case 'cancelled': return 'Points Not Awarded'
+    default: return 'Points Pending'
+  }
+}
+
+const getPointsAvailabilityDescription = () => {
+  switch (pointsAvailabilityClass.value) {
+    case 'available': return 'Your loyalty points have been added to your account and are ready to use.'
+    case 'cancelled': return 'Points were not awarded due to order cancellation.'
+    default: return 'Points will be added to your account once the order is delivered.'
+  }
+}
+
+const getItemPoints = (item) => {
+  if (!order.value?.loyaltyPointsEarned) return 0
+  const itemTotal = item.quantity * item.price
+  const orderSubtotal = calculateSubtotal()
+  const pointsRatio = itemTotal / orderSubtotal
+  return Math.floor(order.value.loyaltyPointsEarned * pointsRatio)
+}
+
+const getUserLoyaltyTier = () => {
+  const balance = loyaltyStore.currentBalance
+  if (balance >= 10000) return 'Platinum Member'
+  if (balance >= 5000) return 'Gold Member'
+  if (balance >= 1000) return 'Silver Member'
+  return 'Bronze Member'
+}
+
+const calculateReorderPoints = () => {
+  const earnRate = loyaltyStore.earnRate || 0.01
+  return Math.floor(order.value?.totalAmount * earnRate)
+}
+
 // Status helpers
 const getCurrentStatusIcon = () => {
   const statusIcons = {
-    'PENDING': 'hourglass_empty',
-    'PROCESSING': 'settings',
-    'SHIPPED': 'local_shipping',
-    'DELIVERED': 'done_all',
-    'CANCELLED': 'cancel'
+    'PENDING': Clock,
+    'PROCESSING': Settings,
+    'SHIPPED': Truck,
+    'DELIVERED': CheckCheck,
+    'CANCELLED': X
   }
-  return statusIcons[order.value?.status] || 'help'
+  return statusIcons[order.value?.status] || AlertCircle
 }
 
 const formatOrderStatus = (status) => {
@@ -425,9 +706,9 @@ const getPaymentMethodDisplay = () => {
 
 const getPaymentMethodIcon = () => {
   if (order.value?.paymentMethod === 'COD') {
-    return 'local_atm'
+    return Banknote
   }
-  return 'credit_card'
+  return CreditCard
 }
 
 const formatPaymentStatus = (status) => {
@@ -443,12 +724,12 @@ const formatPaymentStatus = (status) => {
 const getPaymentStatusIcon = () => {
   const status = order.value?.payment?.status
   const icons = {
-    'PENDING': 'schedule',
-    'COMPLETED': 'check_circle',
-    'FAILED': 'error',
-    'REFUNDED': 'undo'
+    'PENDING': Clock,
+    'COMPLETED': CheckCircle,
+    'FAILED': AlertCircle,
+    'REFUNDED': RotateCcw
   }
-  return icons[status] || 'schedule'
+  return icons[status] || Clock
 }
 
 const getTransactionId = () => {
@@ -576,7 +857,7 @@ const reorderItems = async () => {
     for (const item of order.value.items) {
       await cartStore.addToCart(item.product.id, item.quantity)
     }
-    toast.success('Items added to cart!')
+    toast.success(`Items added to cart! You'll earn ${calculateReorderPoints()} points with this reorder.`)
     router.push('/cart')
   } catch (error) {
     console.error('Error reordering items:', error)
@@ -620,6 +901,15 @@ const trackShipment = () => {
 onMounted(async () => {
   await fetchOrder()
   
+  // ✨ NEW: Load loyalty data if authenticated
+  if (authStore.isAuthenticated) {
+    try {
+      await loyaltyStore.initialize()
+    } catch (error) {
+      console.error('Error loading loyalty data:', error)
+    }
+  }
+  
   // Initialize select dropdown
   await nextTick()
   if (window.M) {
@@ -630,6 +920,16 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+// Icon positioning helper classes
+.left-icon {
+  margin-right: 8px;
+}
+
+.inline-icon {
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
 .custom-card {
   background: white;
   border-radius: 8px;
@@ -640,6 +940,9 @@ onMounted(async () => {
   h5 {
     margin-bottom: 20px;
     color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 }
 
@@ -675,11 +978,7 @@ onMounted(async () => {
     border-radius: 20px;
     font-weight: 500;
     margin-bottom: 10px;
-    
-    i {
-      margin-right: 8px;
-      font-size: 20px;
-    }
+    gap: 8px;
     
     &.pending {
       background: #fff3cd;
@@ -733,11 +1032,7 @@ onMounted(async () => {
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      
-      i {
-        color: white;
-        font-size: 24px;
-      }
+      color: white;
     }
     
     .step-info {
@@ -783,14 +1078,246 @@ onMounted(async () => {
   }
 }
 
+// ✨ NEW: Loyalty Summary Card Styles
+.loyalty-summary-card {
+  background: linear-gradient(135deg, #fff8e1 0%, #fffbf0 100%);
+  border: 2px solid #ffd700;
+  
+  .loyalty-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    
+    h5 {
+      margin: 0;
+      color: #e65100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .loyalty-status-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      
+      &.delivered {
+        background: #4caf50;
+        color: white;
+      }
+      
+      &.pending {
+        background: #ff9800;
+        color: white;
+      }
+      
+      &.cancelled {
+        background: #f44336;
+        color: white;
+      }
+    }
+  }
+  
+  .loyalty-summary-content {
+    .loyalty-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+      
+      .loyalty-metric {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 12px;
+        
+        &.earned {
+          background: rgba(76, 175, 80, 0.1);
+          border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        &.redeemed {
+          background: rgba(33, 150, 243, 0.1);
+          border: 1px solid rgba(33, 150, 243, 0.3);
+        }
+        
+        &.net {
+          background: rgba(255, 152, 0, 0.1);
+          border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+        
+        .metric-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+        }
+        
+        .metric-content {
+          flex: 1;
+          
+          .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            
+            &.positive {
+              color: #4caf50;
+            }
+            
+            &.negative {
+              color: #f44336;
+            }
+            
+            &.neutral {
+              color: #666;
+            }
+          }
+          
+          .metric-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 2px;
+          }
+          
+          .metric-description {
+            font-size: 0.8rem;
+            color: #999;
+          }
+        }
+        
+        &.earned .metric-icon {
+          background: #4caf50;
+        }
+        
+        &.redeemed .metric-icon {
+          background: #2196f3;
+        }
+        
+        &.net .metric-icon {
+          background: #ff9800;
+        }
+      }
+    }
+    
+    .points-availability {
+      margin-bottom: 20px;
+      
+      .availability-info {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 8px;
+        
+        &.available {
+          background: rgba(76, 175, 80, 0.1);
+          border: 1px solid rgba(76, 175, 80, 0.3);
+          color: #4caf50;
+        }
+        
+        &.pending {
+          background: rgba(255, 152, 0, 0.1);
+          border: 1px solid rgba(255, 152, 0, 0.3);
+          color: #ff9800;
+        }
+        
+        &.cancelled {
+          background: rgba(244, 67, 54, 0.1);
+          border: 1px solid rgba(244, 67, 54, 0.3);
+          color: #f44336;
+        }
+        
+        .availability-text {
+          flex: 1;
+          
+          strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #333;
+          }
+          
+          p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+    
+    .review-bonus-opportunity {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      
+      .bonus-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        color: #ff6f00;
+        font-weight: 600;
+      }
+      
+      p {
+        margin-bottom: 12px;
+        color: #666;
+      }
+      
+      .bonus-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        
+        .review-btn {
+          font-size: 0.8rem;
+          display: flex;
+          align-items: center;
+        }
+      }
+    }
+    
+    .current-balance-display {
+      .loyalty-dashboard-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: rgba(33, 150, 243, 0.1);
+        border: 1px solid rgba(33, 150, 243, 0.3);
+        border-radius: 8px;
+        text-decoration: none;
+        color: #1976d2;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          background: rgba(33, 150, 243, 0.2);
+          transform: translateY(-1px);
+        }
+        
+        span {
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
 .address-info {
   p {
     margin: 8px 0;
-    
-    i {
-      margin-right: 5px;
-      color: #666;
-    }
+    display: flex;
+    align-items: center;
   }
 }
 
@@ -839,9 +1366,25 @@ onMounted(async () => {
         color: #333;
         margin: 5px 0;
       }
+
+      // ✨ NEW: Item Points Display
+      .item-points {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 5px 0;
+        color: #ffd700;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
       
       .item-actions {
         margin-top: 10px;
+        
+        button {
+          display: flex;
+          align-items: center;
+        }
       }
     }
     
@@ -871,6 +1414,49 @@ onMounted(async () => {
       border-top: 1px solid #e0e0e0;
       color: #1976d2;
     }
+
+    // ✨ NEW: Loyalty Discount Styling
+    &.loyalty-discount {
+      color: #4caf50;
+      font-weight: 500;
+      
+      .discount-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .discount-amount {
+        font-weight: 600;
+      }
+    }
+
+    // ✨ NEW: Loyalty Points in Summary
+    &.loyalty-redeemed {
+      color: #2196f3;
+      
+      .points-used {
+        font-weight: 500;
+      }
+    }
+    
+    &.loyalty-earned {
+      color: #4caf50;
+      
+      .points-earned {
+        font-weight: 500;
+      }
+    }
+  }
+
+  // ✨ NEW: Loyalty Order Summary Section
+  .loyalty-order-summary {
+    .loyalty-summary-divider {
+      height: 2px;
+      background: linear-gradient(90deg, #ffd700, #ffb347);
+      margin: 15px 0;
+      border-radius: 1px;
+    }
   }
 }
 
@@ -887,10 +1473,28 @@ onMounted(async () => {
   
   p {
     margin: 5px 0;
+    display: flex;
+    align-items: center;
+  }
+
+  // ✨ NEW: Customer Loyalty Status
+  .customer-loyalty-status {
+    margin-top: 8px;
     
-    i {
-      margin-right: 5px;
-      color: #666;
+    .loyalty-tier, .loyalty-balance {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+    }
+    
+    .loyalty-tier {
+      color: #ff9800;
+    }
+    
+    .loyalty-balance {
+      color: #4caf50;
     }
   }
 }
@@ -899,23 +1503,13 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   margin-bottom: 20px;
-  
-  i {
-    font-size: 30px;
-    color: #1976d2;
-    margin-right: 15px;
-    margin-top: 5px;
-  }
+  gap: 15px;
   
   .payment-status {
     display: flex;
     align-items: center;
     margin-top: 5px;
-    
-    i {
-      font-size: 16px;
-      margin-right: 5px;
-    }
+    gap: 5px;
     
     &.completed {
       color: #4caf50;
@@ -950,12 +1544,7 @@ onMounted(async () => {
   padding: 15px;
   border-radius: 8px;
   border-left: 4px solid #1976d2;
-  
-  i {
-    color: #1976d2;
-    margin-right: 10px;
-    margin-top: 2px;
-  }
+  gap: 10px;
   
   .cod-amount {
     color: #1976d2;
@@ -963,10 +1552,95 @@ onMounted(async () => {
   }
 }
 
+// ✨ NEW: Loyalty Actions Card
+.loyalty-actions-card {
+  background: linear-gradient(135deg, #f8f9fa, #e8f5e8);
+  border: 1px solid #4caf50;
+  
+  .loyalty-actions-content {
+    .loyalty-action-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid #e0e0e0;
+      
+      &:last-of-type {
+        border-bottom: none;
+      }
+      
+      .action-info {
+        flex: 1;
+        
+        h6 {
+          margin: 0 0 4px 0;
+          color: #333;
+        }
+        
+        p {
+          margin: 0;
+          color: #666;
+          font-size: 0.9rem;
+        }
+      }
+      
+      button {
+        display: flex;
+        align-items: center;
+      }
+    }
+    
+    .loyalty-program-cta {
+      margin-top: 16px;
+      
+      .loyalty-cta-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        background: rgba(33, 150, 243, 0.1);
+        border: 1px solid rgba(33, 150, 243, 0.3);
+        border-radius: 8px;
+        text-decoration: none;
+        color: #1976d2;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          background: rgba(33, 150, 243, 0.2);
+          transform: translateY(-1px);
+        }
+        
+        .cta-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          
+          strong {
+            display: block;
+            margin-bottom: 4px;
+          }
+          
+          p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #666;
+          }
+        }
+      }
+    }
+  }
+}
+
 .action-buttons {
   .full-width {
     width: 100%;
     margin-bottom: 10px;
+  }
+  
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .admin-status-update {
@@ -996,6 +1670,7 @@ onMounted(async () => {
     color: #1976d2;
     text-decoration: none;
     border-bottom: 1px solid #e0e0e0;
+    gap: 10px;
     
     &:last-child {
       border-bottom: none;
@@ -1006,10 +1681,6 @@ onMounted(async () => {
       margin: 0 -10px;
       padding-left: 10px;
       padding-right: 10px;
-    }
-    
-    i {
-      margin-right: 10px;
     }
   }
 }
@@ -1022,12 +1693,6 @@ onMounted(async () => {
 .error-section {
   text-align: center;
   padding: 60px 20px;
-  
-  i {
-    font-size: 4rem;
-    color: #ccc;
-    margin-bottom: 20px;
-  }
   
   h5 {
     margin-bottom: 20px;
@@ -1043,6 +1708,12 @@ onMounted(async () => {
   }
   100% {
     box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+  }
+}
+
+@media (max-width: 992px) {
+  .loyalty-metrics {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -1074,8 +1745,22 @@ onMounted(async () => {
   .payment-method {
     flex-direction: column;
     
-    i {
+    > * {
       margin: 0 0 10px 0;
+    }
+  }
+
+  .loyalty-action-item {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .bonus-actions {
+    flex-direction: column;
+    
+    .review-btn {
+      width: 100%;
     }
   }
 }

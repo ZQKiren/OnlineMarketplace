@@ -20,7 +20,7 @@ import { CreateChatDto } from './dto/create-chat.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 
 @Controller('chat')
-@UseGuards(JwtAuthGuard) // ✅ Make sure this is applied
+@UseGuards(JwtAuthGuard) 
 export class ChatController {
   private readonly logger = new Logger(ChatController.name);
 
@@ -28,7 +28,7 @@ export class ChatController {
 
   @Post()
   async createChat(@Request() req, @Body() createChatDto: CreateChatDto) {
-    // ✅ Add debugging and validation
+  
     this.logger.log('CreateChat request received');
     this.logger.log('User from request:', req.user);
     this.logger.log('CreateChatDto:', createChatDto);

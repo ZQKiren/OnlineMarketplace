@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+// src/auth/strategies/jwt.strategy.ts - COMPLETE VERSION WITH BLOCKED CHECK
+import { Injectable, UnauthorizedException, ForbiddenException, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -27,9 +28,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    this.logger.log('JWT Strategy - validate called with payload:', payload);
+    this.logger.log('JWT Strategy - validate called with payload:', {
+      sub: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      isBlocked: payload.isBlocked
+    });
 
     try {
+      // ✅ CRITICAL: Always check current user status in database
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
         select: {
@@ -37,6 +44,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           email: true,
           name: true,
           role: true,
+          isBlocked: true,
+          avatar: true,
+          loyaltyPoints: true,
         },
       });
 
@@ -45,9 +55,26 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         throw new UnauthorizedException('User not found');
       }
 
-      this.logger.log('User found and validated:', user);
+      // ✅ CRITICAL: Check if user is currently blocked
+      if (user.isBlocked) {
+        this.logger.error('Blocked user attempted access:', user.email);
+        throw new ForbiddenException('Your account has been blocked. Please contact support.');
+      }
+
+      this.logger.log('User found and validated:', {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        isBlocked: user.isBlocked
+      });
+
       return user;
     } catch (error) {
+      // If it's a ForbiddenException (blocked user), rethrow it
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      
       this.logger.error('Error validating user:', error);
       throw new UnauthorizedException('Token validation failed');
     }

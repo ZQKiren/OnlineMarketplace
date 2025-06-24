@@ -1,4 +1,4 @@
-<!-- src/views/products/ProductDetail.vue -->
+<!-- src/views/products/ProductDetail.vue - REMOVED Loyalty Integration -->
 <template>
   <div class="product-detail-container">
     <!-- Loading State -->
@@ -10,17 +10,17 @@
     <div v-else-if="error" class="error-wrapper">
       <div class="error-content">
         <div class="error-icon">
-          <i class="material-icons">error_outline</i>
+          <AlertCircle :size="80" />
         </div>
         <h4>Product Not Found</h4>
         <p>{{ error }}</p>
         <div class="error-actions">
           <button @click="fetchProduct" class="btn-retry">
-            <i class="material-icons left">refresh</i>
+            <RefreshCw :size="18" class="icon-left" />
             Try Again
           </button>
           <router-link to="/products" class="btn-secondary">
-            <i class="material-icons left">arrow_back</i>
+            <ArrowLeft :size="18" class="icon-left" />
             Back to Products
           </router-link>
         </div>
@@ -46,7 +46,7 @@
                   <!-- Image Overlay Actions -->
                   <div class="image-overlay">
                     <button class="zoom-btn" @click="openImageModal">
-                      <i class="material-icons">zoom_in</i>
+                      <ZoomIn :size="20" />
                     </button>
                   </div>
                 </div>
@@ -78,7 +78,7 @@
             <div class="product-header">
               <!-- Category Badge -->
               <div class="category-badge">
-                <i class="material-icons">restaurant</i>
+                <Tag :size="14" />
                 <span>{{ product.category.name }}</span>
               </div>
 
@@ -88,14 +88,14 @@
               <!-- Rating Section -->
               <div class="rating-section">
                 <div class="stars">
-                  <i 
+                  <Star 
                     v-for="i in 5" 
                     :key="i"
-                    class="material-icons star"
+                    :size="20"
                     :class="{ filled: i <= Math.round(product.avgRating || 0) }"
-                  >
-                    {{ i <= Math.round(product.avgRating || 0) ? 'star' : 'star_border' }}
-                  </i>
+                    :fill="i <= Math.round(product.avgRating || 0) ? '#ffc107' : 'none'"
+                    :stroke="i <= Math.round(product.avgRating || 0) ? '#ffc107' : '#e0e0e0'"
+                  />
                 </div>
                 <span class="rating-text">
                   {{ (product.avgRating || 0).toFixed(1) }} 
@@ -114,7 +114,7 @@
               
               <!-- Stock Status -->
               <div class="stock-status" :class="stockClass">
-                <i class="material-icons">{{ stockIcon }}</i>
+                <component :is="stockIcon" :size="18" />
                 <span>{{ stockText }}</span>
               </div>
             </div>
@@ -131,7 +131,7 @@
                       @click="decreaseQuantity"
                       :disabled="quantity <= 1"
                     >
-                      <i class="material-icons">remove</i>
+                      <Minus :size="18" />
                     </button>
                     <input 
                       type="number" 
@@ -145,7 +145,7 @@
                       @click="increaseQuantity"
                       :disabled="quantity >= product.stock"
                     >
-                      <i class="material-icons">add</i>
+                      <Plus :size="18" />
                     </button>
                   </div>
                 </div>
@@ -157,13 +157,13 @@
                     @click="addToCart"
                     :disabled="addingToCart"
                   >
-                    <span v-if="addingToCart" class="loading-spinner"></span>
-                    <i v-else class="material-icons">add_shopping_cart</i>
+                    <LoaderCircle v-if="addingToCart" :size="20" class="loading-spinner" />
+                    <ShoppingCart v-else :size="20" />
                     <span>{{ addingToCart ? 'Adding...' : 'Add to Cart' }}</span>
                   </button>
                   
                   <button class="btn-buy-now" @click="buyNow">
-                    <i class="material-icons">flash_on</i>
+                    <Zap :size="20" />
                     <span>Buy Now</span>
                   </button>
                 </div>
@@ -172,7 +172,7 @@
               <!-- Out of Stock -->
               <div v-else class="out-of-stock">
                 <button class="btn-disabled" disabled>
-                  <i class="material-icons">remove_circle</i>
+                  <XCircle :size="20" />
                   <span>Out of Stock</span>
                 </button>
                 <p>This item is currently unavailable</p>
@@ -182,9 +182,10 @@
             <!-- Login Prompt -->
             <div v-else class="login-prompt">
               <div class="login-card">
-                <i class="material-icons">account_circle</i>
+                <User :size="48" />
                 <h6>Sign in to purchase</h6>
-                <p>Create an account or sign in to add items to your cart</p>
+                <p>Create an account to add items to your cart!</p>
+                
                 <div class="login-actions">
                   <router-link to="/login" class="btn-login">Sign In</router-link>
                   <router-link to="/register" class="btn-register">Create Account</router-link>
@@ -192,24 +193,24 @@
               </div>
             </div>
 
-            <!-- Enhanced Features -->
+            <!-- Product Features -->
             <div class="product-features">
               <div class="feature-item">
-                <i class="material-icons">local_shipping</i>
+                <Truck :size="24" />
                 <div class="feature-text">
                   <strong>Free Shipping</strong>
                   <span>On orders over $50</span>
                 </div>
               </div>
               <div class="feature-item">
-                <i class="material-icons">cached</i>
+                <RotateCcw :size="24" />
                 <div class="feature-text">
                   <strong>Easy Returns</strong>
                   <span>30-day return policy</span>
                 </div>
               </div>
               <div class="feature-item">
-                <i class="material-icons">security</i>
+                <Shield :size="24" />
                 <div class="feature-text">
                   <strong>Secure Payment</strong>
                   <span>Your data is protected</span>
@@ -264,25 +265,25 @@
               <div class="seller-card">
                 <div class="seller-header">
                   <div class="seller-avatar">
-                    <i class="material-icons">store</i>
+                    <Store :size="24" />
                   </div>
                   <div class="seller-info">
                     <h6>{{ product.seller.name }}</h6>
                     <div class="seller-stats">
                       <div class="stat">
-                        <i class="material-icons">inventory</i>
+                        <Package :size="16" />
                         <span>{{ getSellerProductCount() }} products</span>
                       </div>
                       <div class="stat">
-                        <i class="material-icons">star</i>
+                        <Star :size="16" />
                         <span>{{ getSellerRating() }} rating</span>
                       </div>
                       <div class="stat" v-if="isUserOnline(product.seller.id)">
-                        <i class="material-icons online">circle</i>
+                        <Circle :size="16" class="online" />
                         <span class="online-text">Online now</span>
                       </div>
                       <div class="stat" v-else-if="product.seller.lastSeen">
-                        <i class="material-icons offline">circle</i>
+                        <Circle :size="16" class="offline" />
                         <span class="offline-text">{{ getLastSeenText(product.seller.lastSeen) }}</span>
                       </div>
                     </div>
@@ -320,6 +321,7 @@
             @review-updated="handleReviewUpdated"
           />
         </div>
+        
         <!-- Similar Products Section -->
         <div class="similar-products-section">
           <SimilarProducts 
@@ -333,8 +335,9 @@
   </div>
 </template>
 
-<script>
-import { useRoute } from 'vue-router'
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
 import { useChatStore } from '@/stores/chat'
@@ -348,206 +351,203 @@ import { getStaticUrl } from '@/services/api'
 import { useRecommendationStore } from '@/stores/recommendation'
 import SimilarProducts from '@/components/recommendation/SimilarProducts.vue'
 
-export default {
-  name: 'ProductDetail',
-  components: {
-    ProductReviews,
-    ChatWidget,
-    LoadingSpinner
-  },
-  
-  setup() {
-    const route = useRoute()
-    const authStore = useAuthStore()
-    const cartStore = useCartStore()
-    const chatStore = useChatStore()
-    const toast = useToast()
-    const recommendationStore = useRecommendationStore()
-    
-    return {
-      route,
-      authStore,
-      cartStore,
-      chatStore,
-      toast,
-      recommendationStore
-    }
-  },
-  
-  data() {
-    return {
-      product: null,
-      loading: true,
-      error: null,
-      selectedImage: '',
-      quantity: 1,
-      canReview: false,
-      addingToCart: false,
-      activeTab: 'description'
-    }
-  },
-  
-  computed: {
-    productId() {
-      return this.route.params.id
-    },
-    
-    stockClass() {
-      if (this.product?.stock === 0) return 'out-of-stock'
-      if (this.product?.stock < 10) return 'low-stock'
-      return 'in-stock'
-    },
-    
-    stockIcon() {
-      if (this.product?.stock === 0) return 'remove_circle'
-      if (this.product?.stock < 10) return 'warning'
-      return 'check_circle'
-    },
-    
-    stockText() {
-      if (this.product?.stock === 0) return 'Out of stock'
-      if (this.product?.stock < 10) return `Only ${this.product.stock} left`
-      return `${this.product.stock} in stock`
-    }
-  },
-  
-  async mounted() {
-    await this.fetchProduct()
-  },
-  
-  methods: {
-    async trackProductView() {
-      if (this.productId) {
-        await this.recommendationStore.trackProductView(this.productId)
-      }
-    },
+// Lucide Icons
+import {
+  AlertCircle,
+  RefreshCw,
+  ArrowLeft,
+  ZoomIn,
+  Tag,
+  Star,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Minus,
+  Plus,
+  ShoppingCart,
+  LoaderCircle,
+  Zap,
+  User,
+  Truck,
+  RotateCcw,
+  Shield,
+  Store,
+  Package,
+  Circle
+} from 'lucide-vue-next'
 
-    async fetchProduct() {
-      this.loading = true
-      this.error = null
-      
-      try {
-        const response = await productService.getProductById(this.productId)
-        this.product = response.data
-        
-        if (this.product.images && this.product.images.length > 0) {
-          this.selectedImage = this.product.images[0]
-        }
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+const cartStore = useCartStore()
+const chatStore = useChatStore()
+const toast = useToast()
+const recommendationStore = useRecommendationStore()
 
-        await this.trackProductView()
-        
-        if (this.authStore.isAuthenticated) {
-          await this.checkCanReview()
-        }
-      } catch (error) {
-        console.error('Error fetching product:', error)
-        this.error = error.response?.data?.message || 'Product not found'
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    async checkCanReview() {
-      try {
-        const response = await orderService.getUserOrders()
-        const hasOrderedAndDelivered = response.data.some(order => 
-          order.status === 'DELIVERED' &&
-          order.items.some(item => item.productId === this.productId)
-        )
-        this.canReview = hasOrderedAndDelivered
-      } catch (error) {
-        console.error('Error checking review eligibility:', error)
-      }
-    },
-    
-    getImageUrl(imagePath) {
-      return getStaticUrl(imagePath) || '/placeholder.jpg'
-    },
-    
-    handleImageError(event) {
-      event.target.src = '/placeholder.jpg'
-    },
-    
-    decreaseQuantity() {
-      if (this.quantity > 1) {
-        this.quantity--
-      }
-    },
-    
-    increaseQuantity() {
-      if (this.quantity < this.product.stock) {
-        this.quantity++
-      }
-    },
-    
-    async addToCart() {
-      this.addingToCart = true
-      
-      try {
-        await this.cartStore.addToCart(this.productId, this.quantity)
-        this.toast.success(`Added ${this.quantity} item(s) to cart!`)
-        this.quantity = 1
-      } catch (error) {
-        console.error('Error adding to cart:', error)
-        this.toast.error(error.response?.data?.message || 'Failed to add to cart')
-      } finally {
-        this.addingToCart = false
-      }
-    },
-    
-    async buyNow() {
-      try {
-        await this.addToCart()
-        this.$router.push('/checkout')
-      } catch (error) {
-        console.error('Error in buy now:', error)
-      }
-    },
-    
-    openImageModal() {
-      console.log('Open image modal')
-    },
-    
-    isUserOnline(userId) {
-      return this.chatStore.isUserOnline(userId)
-    },
-    
-    getSellerProductCount() {
-      return this.product?.seller?.productCount || 'Multiple'
-    },
-    
-    getSellerRating() {
-      const rating = this.product?.seller?.avgRating || 0
-      return rating > 0 ? rating.toFixed(1) : 'New seller'
-    },
-    
-    getLastSeenText(lastSeenDate) {
-      if (!lastSeenDate) return 'Offline'
-      
-      const lastSeen = new Date(lastSeenDate)
-      const now = new Date()
-      const diffInMinutes = (now - lastSeen) / (1000 * 60)
-      
-      if (diffInMinutes < 5) {
-        return 'Just now'
-      } else if (diffInMinutes < 60) {
-        return `${Math.floor(diffInMinutes)}m ago`
-      } else if (diffInMinutes < 24 * 60) {
-        return `${Math.floor(diffInMinutes / 60)}h ago`
-      } else {
-        return `${Math.floor(diffInMinutes / (24 * 60))}d ago`
-      }
-    },
-    
-    handleReviewAdded() {
-      this.fetchProduct()
-    },
-    
-    handleReviewUpdated() {
-      this.fetchProduct()
-    }
+const product = ref(null)
+const loading = ref(true)
+const error = ref(null)
+const selectedImage = ref('')
+const quantity = ref(1)
+const canReview = ref(false)
+const addingToCart = ref(false)
+const activeTab = ref('description')
+
+const productId = computed(() => route.params.id)
+
+const stockClass = computed(() => {
+  if (product.value?.stock === 0) return 'out-of-stock'
+  if (product.value?.stock < 10) return 'low-stock'
+  return 'in-stock'
+})
+
+const stockIcon = computed(() => {
+  if (product.value?.stock === 0) return XCircle
+  if (product.value?.stock < 10) return AlertTriangle
+  return CheckCircle
+})
+
+const stockText = computed(() => {
+  if (product.value?.stock === 0) return 'Out of stock'
+  if (product.value?.stock < 10) return `Only ${product.value.stock} left`
+  return `${product.value.stock} in stock`
+})
+
+// Methods
+const trackProductView = async () => {
+  if (productId.value) {
+    await recommendationStore.trackProductView(productId.value)
   }
 }
+
+const fetchProduct = async () => {
+  loading.value = true
+  error.value = null
+  
+  try {
+    const response = await productService.getProductById(productId.value)
+    product.value = response.data
+    
+    if (product.value.images && product.value.images.length > 0) {
+      selectedImage.value = product.value.images[0]
+    }
+
+    await trackProductView()
+    
+    if (authStore.isAuthenticated) {
+      await checkCanReview()
+    }
+  } catch (err) {
+    console.error('Error fetching product:', err)
+    error.value = err.response?.data?.message || 'Product not found'
+  } finally {
+    loading.value = false
+  }
+}
+
+const checkCanReview = async () => {
+  try {
+    const response = await orderService.getUserOrders()
+    const hasOrderedAndDelivered = response.data.some(order => 
+      order.status === 'DELIVERED' &&
+      order.items.some(item => item.productId === productId.value)
+    )
+    canReview.value = hasOrderedAndDelivered
+  } catch (err) {
+    console.error('Error checking review eligibility:', err)
+  }
+}
+
+const getImageUrl = (imagePath) => {
+  return getStaticUrl(imagePath) || '/placeholder.jpg'
+}
+
+const handleImageError = (event) => {
+  event.target.src = '/placeholder.jpg'
+}
+
+const decreaseQuantity = () => {
+  if (quantity.value > 1) {
+    quantity.value--
+  }
+}
+
+const increaseQuantity = () => {
+  if (quantity.value < product.value.stock) {
+    quantity.value++
+  }
+}
+
+const addToCart = async () => {
+  addingToCart.value = true
+  
+  try {
+    await cartStore.addToCart(productId.value, quantity.value)
+    toast.success(`Added ${quantity.value} item(s) to cart!`)
+    quantity.value = 1
+  } catch (err) {
+    console.error('Error adding to cart:', err)
+    toast.error(err.response?.data?.message || 'Failed to add to cart')
+  } finally {
+    addingToCart.value = false
+  }
+}
+
+const buyNow = async () => {
+  try {
+    await addToCart()
+    router.push('/checkout')
+  } catch (err) {
+    console.error('Error in buy now:', err)
+  }
+}
+
+const openImageModal = () => {
+  console.log('Open image modal')
+}
+
+const isUserOnline = (userId) => {
+  return chatStore.isUserOnline(userId)
+}
+
+const getSellerProductCount = () => {
+  return product.value?.seller?.productCount || 'Multiple'
+}
+
+const getSellerRating = () => {
+  const rating = product.value?.seller?.avgRating || 0
+  return rating > 0 ? rating.toFixed(1) : 'New seller'
+}
+
+const getLastSeenText = (lastSeenDate) => {
+  if (!lastSeenDate) return 'Offline'
+  
+  const lastSeen = new Date(lastSeenDate)
+  const now = new Date()
+  const diffInMinutes = (now - lastSeen) / (1000 * 60)
+  
+  if (diffInMinutes < 5) {
+    return 'Just now'
+  } else if (diffInMinutes < 60) {
+    return `${Math.floor(diffInMinutes)}m ago`
+  } else if (diffInMinutes < 24 * 60) {
+    return `${Math.floor(diffInMinutes / 60)}h ago`
+  } else {
+    return `${Math.floor(diffInMinutes / (24 * 60))}d ago`
+  }
+}
+
+const handleReviewAdded = () => {
+  fetchProduct()
+}
+
+const handleReviewUpdated = () => {
+  fetchProduct()
+}
+
+onMounted(async () => {
+  await fetchProduct()
+})
 </script>
 
 <style scoped lang="scss">
@@ -580,11 +580,7 @@ export default {
     
     .error-icon {
       margin-bottom: 24px;
-      
-      i {
-        font-size: 80px;
-        color: #f44336;
-      }
+      color: #f44336;
     }
     
     h4 {
@@ -613,8 +609,8 @@ export default {
         text-decoration: none;
         transition: all 0.3s ease;
         
-        i {
-          font-size: 18px;
+        .icon-left {
+          margin-right: 0;
         }
       }
       
@@ -789,10 +785,6 @@ export default {
     font-size: 12px;
     font-weight: 500;
     margin-bottom: 16px;
-    
-    i {
-      font-size: 14px;
-    }
   }
   
   .product-title {
@@ -816,17 +808,8 @@ export default {
       display: flex;
       gap: 2px;
       
-      .star {
-        font-size: 20px;
-        transition: color 0.3s ease;
-        
-        &.filled {
-          color: #ffc107;
-        }
-        
-        &:not(.filled) {
-          color: #e0e0e0;
-        }
+      .filled {
+        color: #ffc107;
       }
     }
     
@@ -876,21 +859,18 @@ export default {
     
     &.in-stock {
       color: #4caf50;
+      }
     }
     
     &.low-stock {
       color: #ff9800;
-    }
+      }
     
     &.out-of-stock {
       color: #f44336;
     }
-    
-    i {
-      font-size: 18px;
-    }
   }
-}
+
 
 .purchase-section {
   margin-bottom: 32px;
@@ -934,11 +914,6 @@ export default {
             opacity: 0.5;
             cursor: not-allowed;
           }
-          
-          i {
-            font-size: 18px;
-            color: #666;
-          }
         }
         
         .quantity-input {
@@ -977,10 +952,6 @@ export default {
         font-size: 16px;
         cursor: pointer;
         transition: all 0.3s ease;
-        
-        i {
-          font-size: 20px;
-        }
       }
       
       .btn-add-cart {
@@ -992,18 +963,12 @@ export default {
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(25, 118, 210, 0.3);
         }
-        
         &:disabled {
           opacity: 0.7;
           cursor: not-allowed;
         }
         
         .loading-spinner {
-          width: 20px;
-          height: 20px;
-          border: 2px solid #ffffff;
-          border-top: 2px solid transparent;
-          border-radius: 50%;
           animation: spin 1s linear infinite;
         }
       }
@@ -1037,10 +1002,6 @@ export default {
       justify-content: center;
       gap: 8px;
       margin-bottom: 12px;
-      
-      i {
-        font-size: 20px;
-      }
     }
     
     p {
@@ -1056,12 +1017,6 @@ export default {
     padding: 24px;
     border-radius: 12px;
     text-align: center;
-    
-    i {
-      font-size: 48px;
-      color: #ff9800;
-      margin-bottom: 16px;
-    }
     
     h6 {
       margin-bottom: 8px;
@@ -1131,11 +1086,6 @@ export default {
     
     &:last-child {
       margin-bottom: 0;
-    }
-    
-    i {
-      color: #4caf50;
-      font-size: 24px;
     }
     
     .feature-text {
@@ -1226,11 +1176,7 @@ export default {
             display: flex;
             align-items: center;
             justify-content: center;
-            
-            i {
-              color: white;
-              font-size: 24px;
-            }
+            color: white;
           }
           
           .seller-info {
@@ -1254,16 +1200,12 @@ export default {
                 font-size: 14px;
                 color: #666;
                 
-                i {
-                  font-size: 16px;
-                  
-                  &.online {
-                    color: #4caf50;
-                  }
-                  
-                  &.offline {
-                    color: #999;
-                  }
+                .online {
+                  color: #4caf50;
+                }
+                
+                .offline {
+                  color: #999;
                 }
                 
                 .online-text {
@@ -1314,15 +1256,15 @@ export default {
   overflow: hidden;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .similar-products-section {
   margin-top: 50px;
   padding-top: 50px;
   border-top: 1px solid #e0e0e0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
