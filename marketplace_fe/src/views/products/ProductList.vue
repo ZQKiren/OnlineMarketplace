@@ -1,4 +1,3 @@
-<!-- src/views/products/ProductList.vue - REMOVED Loyalty Integration -->
 <template>
   <div class="product-list-container">
     <div class="container">
@@ -20,13 +19,156 @@
         <div class="col s12 m3">
           <div class="filters-card">
             <div class="filters-header">
-              <Filter :size="20" />
-              <h5>Filters</h5>
-              <button v-if="hasActiveFilters" @click="clearAllFilters" class="btn-clear-filters">
-                <X :size="16" />
+              <h5>
+                <Filter :size="18" />
+                Filters
+              </h5>
+              <button v-if="hasActiveFilters" @click="clearAllFilters" class="clear-all-btn">
+                <RotateCcw :size="14" />
               </button>
             </div>
-            <ProductFilter @filter-change="handleFilterChange" />
+            
+            <!-- Search -->
+            <div class="filter-section">
+              <div class="search-box">
+                <Search :size="16" class="search-icon" />
+                <input 
+                  v-model="filters.search"
+                  @input="debouncedSearch"
+                  type="text" 
+                  placeholder="Search products..."
+                  class="search-input"
+                />
+                <button 
+                  v-if="filters.search" 
+                  @click="clearSearch"
+                  class="clear-search"
+                >
+                  <X :size="14" />
+                </button>
+              </div>
+            </div>
+            
+            <!-- Category -->
+            <div class="filter-section">
+              <h6 class="filter-title">Category</h6>
+              <select v-model="filters.categoryId" @change="fetchProducts" class="filter-select">
+                <option value="">All Categories</option>
+                <option 
+                  v-for="category in categories" 
+                  :key="category.id" 
+                  :value="category.id"
+                >
+                  {{ category.name }}
+                </option>
+              </select>
+            </div>
+            
+            <!-- Price Range -->
+            <div class="filter-section">
+              <h6 class="filter-title">Price Range</h6>
+              <div class="price-range">
+                <input 
+                  v-model.number="filters.minPrice"
+                  @change="fetchProducts"
+                  type="number" 
+                  placeholder="Min"
+                  min="0"
+                  class="price-input"
+                />
+                <span class="range-separator">to</span>
+                <input 
+                  v-model.number="filters.maxPrice"
+                  @change="fetchProducts"
+                  type="number" 
+                  placeholder="Max"
+                  min="0"
+                  class="price-input"
+                />
+              </div>
+              <div v-if="priceError" class="error-text">
+                {{ priceError }}
+              </div>
+            </div>
+            
+            <!-- Rating -->
+            <div class="filter-section">
+              <h6 class="filter-title">Rating</h6>
+              <div class="rating-list">
+                <label 
+                  v-for="rating in ratingOptions" 
+                  :key="rating.value"
+                  class="rating-item"
+                >
+                  <input 
+                    v-model="filters.minRating"
+                    :value="rating.value"
+                    @change="fetchProducts"
+                    type="radio" 
+                    name="rating"
+                  />
+                  <div class="rating-content">
+                    <div class="stars">
+                      <Star 
+                        v-for="i in 5" 
+                        :key="i"
+                        :size="12"
+                        :fill="i <= rating.value ? '#ffc107' : 'none'"
+                        :stroke="i <= rating.value ? '#ffc107' : '#ddd'"
+                      />
+                    </div>
+                    <span>& Up</span>
+                  </div>
+                </label>
+                
+                <label class="rating-item">
+                  <input 
+                    v-model="filters.minRating"
+                    :value="null"
+                    @change="fetchProducts"
+                    type="radio" 
+                    name="rating"
+                  />
+                  <span class="any-rating">Any Rating</span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- Active Filters -->
+            <div v-if="hasActiveFilters" class="active-filters-section">
+              <div class="active-filters-header">
+                <span>Active Filters ({{ activeFilterCount }})</span>
+              </div>
+              <div class="active-filters-list">
+                <div v-if="filters.search" class="active-filter-tag">
+                  <span>"{{ truncateText(filters.search, 12) }}"</span>
+                  <button @click="removeFilter('search')">
+                    <X :size="10" />
+                  </button>
+                </div>
+                
+                <div v-if="filters.categoryId && selectedCategory" class="active-filter-tag">
+                  <span>{{ selectedCategory.name }}</span>
+                  <button @click="removeFilter('categoryId')">
+                    <X :size="10" />
+                  </button>
+                </div>
+                
+                <div v-if="filters.minPrice || filters.maxPrice" class="active-filter-tag">
+                  <span>${{ filters.minPrice || '0' }}-${{ filters.maxPrice || '∞' }}</span>
+                  <button @click="removeFilter('price')">
+                    <X :size="10" />
+                  </button>
+                </div>
+                
+                <div v-if="filters.minRating" class="active-filter-tag">
+                  <span>{{ filters.minRating }}+ stars</span>
+                  <button @click="removeFilter('minRating')">
+                    <X :size="10" />
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -44,34 +186,32 @@
               <div v-if="hasActiveFilters" class="active-filters">
                 <div class="filter-chips">
                   <div v-if="filters.search" class="filter-chip">
-                    <Search :size="14" />
-                    <span>{{ filters.search }}</span>
+                    <Search :size="12" />
+                    <span>{{ truncateText(filters.search, 20) }}</span>
                     <button @click="removeFilter('search')">
-                      <X :size="12" />
+                      <X :size="10" />
                     </button>
                   </div>
                   
-                  <div v-if="filters.categoryId" class="filter-chip">
-                    <Tag :size="14" />
-                    <span>Category</span>
+                  <div v-if="filters.categoryId && selectedCategory" class="filter-chip">
+                    <span>{{ selectedCategory.name }}</span>
                     <button @click="removeFilter('categoryId')">
-                      <X :size="12" />
+                      <X :size="10" />
                     </button>
                   </div>
                   
                   <div v-if="filters.minPrice || filters.maxPrice" class="filter-chip">
-                    <DollarSign :size="14" />
-                    <span>Price Range</span>
+                    <span>${{ filters.minPrice || '0' }} - ${{ filters.maxPrice || '∞' }}</span>
                     <button @click="removeFilter('price')">
-                      <X :size="12" />
+                      <X :size="10" />
                     </button>
                   </div>
                   
                   <div v-if="filters.minRating" class="filter-chip">
-                    <Star :size="14" />
-                    <span>{{ filters.minRating }}+ rating</span>
+                    <Star :size="12" />
+                    <span>{{ filters.minRating }}+</span>
                     <button @click="removeFilter('minRating')">
-                      <X :size="12" />
+                      <X :size="10" />
                     </button>
                   </div>
                 </div>
@@ -218,13 +358,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useCategoryStore } from '@/stores/category'
 import { useToast } from 'vue-toastification'
+import { debounce } from 'lodash-es'
 import productService from '@/services/product.service'
 import ProductCard from '@/components/product/ProductCard.vue'
-import ProductFilter from '@/components/product/ProductFilter.vue'
 
 // Lucide Icons
 import {
@@ -233,8 +374,6 @@ import {
   Filter,
   X,
   Search,
-  Tag,
-  DollarSign,
   Grid3x3,
   List,
   ChevronDown,
@@ -251,10 +390,12 @@ import {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const categoryStore = useCategoryStore()
 const toast = useToast()
 
 // State
 const products = ref([])
+const categories = ref([])
 const loading = ref(false)
 const error = ref(null)
 const currentPage = ref(1)
@@ -271,11 +412,50 @@ const filters = ref({
   minRating: null
 })
 
+// Rating options for better UX
+const ratingOptions = [
+  { value: 4, label: '4+ stars' },
+  { value: 3, label: '3+ stars' },
+  { value: 2, label: '2+ stars' },
+  { value: 1, label: '1+ stars' }
+]
+
 // Computed
 const hasActiveFilters = computed(() => {
-  return Object.values(filters.value).some(value => 
-    value !== null && value !== undefined && value !== ''
-  )
+  return filters.value.search !== '' ||
+         filters.value.categoryId !== '' ||
+         filters.value.minPrice !== null ||
+         filters.value.maxPrice !== null ||
+         filters.value.minRating !== null
+})
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (filters.value.search) count++
+  if (filters.value.categoryId) count++
+  if (filters.value.minPrice || filters.value.maxPrice) count++
+  if (filters.value.minRating) count++
+  return count
+})
+
+const selectedCategory = computed(() => {
+  if (!filters.value.categoryId) return null
+  return categories.value.find(cat => cat.id === filters.value.categoryId)
+})
+
+const priceError = computed(() => {
+  if (filters.value.minPrice && filters.value.maxPrice) {
+    if (Number(filters.value.minPrice) > Number(filters.value.maxPrice)) {
+      return 'Min price cannot be greater than max price'
+    }
+  }
+  if (filters.value.minPrice && Number(filters.value.minPrice) < 0) {
+    return 'Price cannot be negative'
+  }
+  if (filters.value.maxPrice && Number(filters.value.maxPrice) < 0) {
+    return 'Price cannot be negative'
+  }
+  return null
 })
 
 const visiblePages = computed(() => {
@@ -316,6 +496,9 @@ const visiblePages = computed(() => {
 
 // Methods
 const fetchProducts = async () => {
+  // Don't fetch if there's a price error
+  if (priceError.value) return
+  
   loading.value = true
   error.value = null
   
@@ -326,20 +509,9 @@ const fetchProducts = async () => {
       ...filters.value
     }
     
-    // Remove null/undefined/empty values AND validate API parameters
+    // Remove null/undefined/empty values
     Object.keys(params).forEach(key => {
       if (params[key] === null || params[key] === undefined || params[key] === '') {
-        delete params[key]
-      }
-    })
-    
-    // Validate specific parameters that might cause API errors
-    const allowedParams = ['page', 'limit', 'search', 'categoryId', 'minPrice', 'maxPrice', 'minRating', 'sort']
-    
-    // Remove any params not in the allowed list
-    Object.keys(params).forEach(key => {
-      if (!allowedParams.includes(key)) {
-        console.warn(`Removing unsupported parameter: ${key}`)
         delete params[key]
       }
     })
@@ -369,18 +541,32 @@ const fetchProducts = async () => {
   }
 }
 
-const handleFilterChange = (newFilters) => {
-  filters.value = { ...newFilters }
+const debouncedSearch = debounce(() => {
+  currentPage.value = 1
+  fetchProducts()
+}, 500)
+
+const clearSearch = () => {
+  filters.value.search = ''
   currentPage.value = 1
   fetchProducts()
 }
 
 const removeFilter = (filterKey) => {
-  if (filterKey === 'price') {
-    filters.value.minPrice = null
-    filters.value.maxPrice = null
-  } else {
-    filters.value[filterKey] = filterKey === 'search' ? '' : null
+  switch (filterKey) {
+    case 'search':
+      filters.value.search = ''
+      break
+    case 'categoryId':
+      filters.value.categoryId = ''
+      break
+    case 'price':
+      filters.value.minPrice = null
+      filters.value.maxPrice = null
+      break
+    case 'minRating':
+      filters.value.minRating = null
+      break
   }
   currentPage.value = 1
   fetchProducts()
@@ -448,8 +634,20 @@ const initializeFromURL = () => {
   }
 }
 
+const truncateText = (text, length) => {
+  if (!text) return ''
+  return text.length > length ? text.substring(0, length) + '...' : text
+}
+
 // Lifecycle
 onMounted(async () => {
+  try {
+    await categoryStore.fetchCategories()
+    categories.value = categoryStore.categories
+  } catch (error) {
+    console.error('Error loading categories:', error)
+  }
+  
   initializeFromURL()
   await fetchProducts()
 })
@@ -461,6 +659,13 @@ watch(() => route.query, (newQuery, oldQuery) => {
     fetchProducts()
   }
 })
+
+// Watch for price changes to validate
+watch(() => [filters.value.minPrice, filters.value.maxPrice], () => {
+  if (!priceError.value) {
+    debouncedSearch()
+  }
+}, { deep: true })
 </script>
 
 <style scoped lang="scss">
@@ -518,41 +723,283 @@ watch(() => route.query, (newQuery, oldQuery) => {
 
 .filters-card {
   background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   position: sticky;
   top: 20px;
+  border: 1px solid #f0f0f0;
   
   .filters-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f8f9fa;
     
     h5 {
       margin: 0;
       display: flex;
       align-items: center;
-      gap: 8px;
-      color: #333;
-      font-weight: 600;
+      gap: 10px;
+      color: #2c3e50;
+      font-weight: 700;
+      font-size: 1.1rem;
     }
     
-    .btn-clear-filters {
+    .clear-all-btn {
+      background: #ff4757;
+      border: none;
+      color: white;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background: #ff3838;
+        transform: scale(1.05);
+      }
+    }
+  }
+  
+  .filter-section {
+    margin-bottom: 20px;
+    
+    .filter-title {
+      color: #2c3e50;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin: 0 0 8px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+  
+  // Search Box
+  .search-box {
+    position: relative;
+    
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #7f8c8d;
+      z-index: 2;
+    }
+    
+    .search-input {
+      width: 70%;
+      padding: 12px 16px 12px 40px;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+      
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+      }
+      
+      &::placeholder {
+        color: #95a5a6;
+      }
+    }
+    
+    .clear-search {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
       background: transparent;
       border: none;
-      color: #666;
+      color: #95a5a6;
       padding: 4px;
       border-radius: 4px;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
       
       &:hover {
-        background: #f5f5f5;
-        color: #333;
+        background: #e74c3c;
+        color: white;
+      }
+    }
+  }
+  
+  // Select
+  .filter-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: #f8f9fa;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+      background: white;
+      box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+    }
+  }
+  
+  // Price Range
+  .price-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    .price-input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 2px solid #e9ecef;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      text-align: center;
+      background: #f8f9fa;
+      transition: all 0.3s ease;
+      
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+        background: white;
+      }
+      
+      &::placeholder {
+        color: #95a5a6;
+      }
+      
+      // Remove arrows
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      
+      &[type=number] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+      }
+    }
+    
+    .range-separator {
+      color: #7f8c8d;
+      font-weight: 500;
+      font-size: 0.8rem;
+    }
+  }
+  
+  .error-text {
+    color: #e74c3c;
+    font-size: 0.7rem;
+    margin-top: 4px;
+  }
+  
+  // Rating
+  .rating-list {
+    .rating-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 6px;
+      
+      &:hover {
+        background: #f8f9fa;
+        padding-left: 4px;
+      }
+      
+      input[type="radio"] {
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+      }
+      
+      .rating-content {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        
+        .stars {
+          display: flex;
+          gap: 1px;
+        }
+        
+        span {
+          font-size: 0.8rem;
+          color: #34495e;
+          font-weight: 500;
+        }
+      }
+      
+      .any-rating {
+        font-size: 0.8rem;
+        color: #7f8c8d;
+        font-weight: 500;
+      }
+    }
+  }
+  
+  // Active Filters Section
+  .active-filters-section {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 20px;
+    border-left: 4px solid $primary-color;
+    
+    .active-filters-header {
+      font-size: 0.8rem;
+      color: #2c3e50;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .active-filters-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      
+      .active-filter-tag {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: $primary-color;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        
+        span {
+          white-space: nowrap;
+        }
+        
+        button {
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          padding: 2px;
+          border-radius: 50%;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+          }
+        }
       }
     }
   }
@@ -587,23 +1034,24 @@ watch(() => route.query, (newQuery, oldQuery) => {
       .filter-chips {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
         
         .filter-chip {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 4px;
           background: #e3f2fd;
           color: $primary-color;
-          padding: 6px 12px;
-          border-radius: 16px;
-          font-size: 0.85rem;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 500;
           
           button {
             background: transparent;
             border: none;
             color: inherit;
-            padding: 2px;
+            padding: 1px;
             border-radius: 50%;
             cursor: pointer;
             transition: background 0.3s ease;
@@ -975,6 +1423,72 @@ watch(() => route.query, (newQuery, oldQuery) => {
     }
   }
   
+  .filters-card {
+    position: static;
+    margin-bottom: 20px;
+    padding: 16px;
+    
+    .filters-header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      
+      h5 {
+        font-size: 1rem;
+      }
+    }
+    
+    .filter-section {
+      margin-bottom: 16px;
+      
+      .filter-title {
+        font-size: 0.8rem;
+        margin-bottom: 6px;
+      }
+    }
+    
+    .search-box .search-input {
+      padding: 10px 14px 10px 36px;
+      font-size: 0.85rem;
+    }
+    
+    .filter-select {
+      padding: 8px 10px;
+      font-size: 0.8rem;
+    }
+    
+    .price-range {
+      flex-direction: column;
+      gap: 6px;
+      
+      .range-separator {
+        transform: rotate(90deg);
+        margin: 2px 0;
+      }
+    }
+    
+    .rating-list .rating-item {
+      padding: 4px 0;
+      
+      .rating-content span {
+        font-size: 0.75rem;
+      }
+    }
+    
+    .active-filters-section {
+      padding: 12px;
+      
+      .active-filters-header {
+        font-size: 0.75rem;
+        margin-bottom: 8px;
+      }
+      
+      .active-filters-list .active-filter-tag {
+        font-size: 0.65rem;
+        padding: 3px 6px;
+      }
+    }
+  }
+  
   .filter-bar {
     padding: 16px;
     
@@ -1023,14 +1537,14 @@ watch(() => route.query, (newQuery, oldQuery) => {
 @media (max-width: 600px) {
   .filters-card .filters-header {
     h5 {
-      font-size: 1.1rem;
+      font-size: 1rem;
     }
   }
   
   .filter-bar .results-info .active-filters .filter-chips {
     .filter-chip {
-      font-size: 0.8rem;
-      padding: 4px 8px;
+      font-size: 0.7rem;
+      padding: 3px 6px;
     }
   }
   
@@ -1085,11 +1599,14 @@ watch(() => route.query, (newQuery, oldQuery) => {
   }
 }
 
-// Enhanced focus states for accessibility
+// Focus states for accessibility
 .pagination-btn:focus,
 .page-btn:focus,
 .view-btn:focus,
-.btn-clear-filters:focus {
+.clear-all-btn:focus,
+.search-input:focus,
+.filter-select:focus,
+.price-input:focus {
   outline: 2px solid $primary-color;
   outline-offset: 2px;
 }
