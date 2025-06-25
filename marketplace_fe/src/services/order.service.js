@@ -1,4 +1,4 @@
-// src/services/order.service.js
+// src/services/order.service.js - UPDATED
 import api from './api'
 
 export default {
@@ -22,7 +22,12 @@ export default {
     return api.get(`/orders/${id}`)
   },
 
-  // Update order status (admin)
+  // ✅ UPDATED: User cancel their own order
+  cancelOrder(id) {
+    return api.patch(`/orders/${id}/cancel`)
+  },
+
+  // ✅ ADMIN ONLY: Update order status
   updateOrderStatus(id, status) {
     return api.patch(`/orders/${id}/status`, { status })
   },
@@ -30,11 +35,6 @@ export default {
   // ✅ NEW: Complete COD payment when delivered (admin)
   completeCODPayment(orderId) {
     return api.post(`/orders/${orderId}/complete-cod-payment`)
-  },
-
-  // ✅ NEW: Cancel order
-  cancelOrder(id) {
-    return api.patch(`/orders/${id}/status`, { status: 'CANCELLED' })
   },
 
   // Admin endpoints

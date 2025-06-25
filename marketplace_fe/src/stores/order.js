@@ -1,4 +1,4 @@
-// src/stores/order.js
+// src/stores/order.js - UPDATED
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import orderService from '@/services/order.service'
@@ -86,6 +86,30 @@ export const useOrderStore = defineStore('order', () => {
     }
   }
 
+  // ✅ UPDATED: User cancel their own order
+  async function cancelOrder(id) {
+    try {
+      const response = await orderService.cancelOrder(id)
+      
+      // Update in orders array
+      const index = orders.value.findIndex(order => order.id === id)
+      if (index !== -1) {
+        orders.value[index] = response.data
+      }
+      
+      // Update current order if it matches
+      if (currentOrder.value?.id === id) {
+        currentOrder.value = response.data
+      }
+      
+      return response.data
+    } catch (error) {
+      console.error('Error cancelling order:', error)
+      throw error
+    }
+  }
+
+  // ✅ ADMIN ONLY: Update order status
   async function updateOrderStatus(id, status) {
     try {
       const response = await orderService.updateOrderStatus(id, status)
@@ -161,11 +185,11 @@ export const useOrderStore = defineStore('order', () => {
     deliveredOrders,
     cancelledOrders,
     
-    // Actions
     createOrder,
     fetchUserOrders,
     fetchOrderById,
-    updateOrderStatus,
+    cancelOrder,        
+    updateOrderStatus, 
     fetchAllOrders,
     getOrderById,
     clearCurrentOrder,

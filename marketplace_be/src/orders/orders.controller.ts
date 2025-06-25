@@ -1,4 +1,4 @@
-// src/orders/orders.controller.ts - UPDATED với Loyalty endpoints
+// src/orders/orders.controller.ts - FIXED với endpoint hủy đơn riêng
 import { 
   Controller, 
   Get, 
@@ -47,6 +47,14 @@ export class OrdersController {
     @CurrentUser() user: any,
   ) {
     return this.ordersService.findOne(id, user.id, user.role === Role.ADMIN);
+  }
+
+  @Patch(':id/cancel')
+  cancelOrder(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.ordersService.cancelUserOrder(id, user.id);
   }
 
   @Patch(':id/status')

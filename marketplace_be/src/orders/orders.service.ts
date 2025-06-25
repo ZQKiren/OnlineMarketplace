@@ -226,6 +226,86 @@ export class OrdersService {
     return order;
   }
 
+  // ✅ NEW: Method cho user hủy đơn hàng của chính họ
+  async cancelUserOrder(orderId: string, userId: string) {
+    // Tìm đơn hàng và kiểm tra quyền sở hữu
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        payment: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Kiểm tra quyền sở hữu
+    if (order.userId !== userId) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Kiểm tra trạng thái có thể hủy
+    if (!['PENDING', 'PROCESSING'].includes(order.status)) {
+      throw new BadRequestException(
+        `Cannot cancel order with status: ${order.status}. Only PENDING or PROCESSING orders can be cancelled.`
+      );
+    }
+
+    // Kiểm tra payment status nếu đã thanh toán
+    if (order.payment && order.payment.status === PaymentStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Cannot cancel order that has been paid. Please contact support for refund.'
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Cập nhật trạng thái đơn hàng
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.CANCELLED },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+          payment: true,
+        },
+      });
+
+      // Hoàn lại stock cho các sản phẩm
+      for (const item of order.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              increment: item.quantity,
+            },
+          },
+        });
+      }
+
+      // Hủy payment nếu có (COD)
+      if (order.payment && order.payment.status === PaymentStatus.PENDING) {
+        await tx.payment.update({
+          where: { id: order.payment.id },
+          data: { status: PaymentStatus.FAILED },
+        });
+      }
+
+      // TODO: Hoàn lại loyalty points nếu đã sử dụng
+      // Điều này cần implement sau khi có loyalty redemption tracking
+
+      return updatedOrder;
+    });
+  }
+
   // ✨ UPDATED: Update order status with loyalty points integration
   async updateStatus(id: string, status: OrderStatus, isAdmin: boolean) {
     if (!isAdmin) {

@@ -502,7 +502,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
-import { useLoyaltyStore } from '@/stores/loyalty' // ✨ NEW
+import { useLoyaltyStore } from '@/stores/loyalty'
 import { useToast } from 'vue-toastification'
 import orderService from '@/services/order.service'
 import paymentService from '@/services/payment.service'
@@ -522,7 +522,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const cartStore = useCartStore()
-const loyaltyStore = useLoyaltyStore() // ✨ NEW
+const loyaltyStore = useLoyaltyStore() 
 const toast = useToast()
 
 const order = ref(null)
@@ -565,7 +565,6 @@ const canReview = computed(() => {
     order.value.status === 'DELIVERED'
 })
 
-// ✨ NEW: Loyalty computed properties
 const netPoints = computed(() => {
   const earned = order.value?.loyaltyPointsEarned || 0
   const redeemed = order.value?.loyaltyPointsRedeemed || 0
@@ -593,7 +592,6 @@ const reviewableItems = computed(() => {
   return order.value?.items?.filter(item => !item.hasReviewBonus) || []
 })
 
-// ✨ NEW: Loyalty methods
 const getLoyaltyStatusText = () => {
   if (order.value?.status === 'DELIVERED') return 'Processed'
   if (order.value?.status === 'CANCELLED') return 'Cancelled'
@@ -645,7 +643,6 @@ const calculateReorderPoints = () => {
   return Math.floor(order.value?.totalAmount * earnRate)
 }
 
-// Status helpers
 const getCurrentStatusIcon = () => {
   const statusIcons = {
     'PENDING': Clock,
@@ -692,11 +689,9 @@ const isStatusCompleted = (status) => {
 
 const getStatusDate = (status) => {
   if (status === 'PENDING') return order.value?.createdAt
-  // In real app, you'd track status change timestamps
   return null
 }
 
-// Payment helpers
 const getPaymentMethodDisplay = () => {
   if (order.value?.paymentMethod === 'COD') {
     return 'Cash on Delivery'
@@ -786,17 +781,36 @@ const fetchOrder = async () => {
   }
 }
 
+// Script section của OrderDetail.vue - FIXED cancelOrder method
+
 const cancelOrder = async () => {
   if (!confirm('Are you sure you want to cancel this order?')) return
   
   processing.value = true
   try {
-    await orderService.updateOrderStatus(orderId.value, 'CANCELLED')
+    await orderService.cancelOrder(orderId.value)
+    
+    // Cập nhật local state
     order.value.status = 'CANCELLED'
+    
     toast.success('Order cancelled successfully')
+    
+    // Refresh order để lấy thông tin mới nhất
+    await fetchOrder()
+    
   } catch (error) {
     console.error('Error cancelling order:', error)
-    toast.error('Failed to cancel order')
+    
+    // Xử lý các loại lỗi khác nhau
+    if (error.response?.status === 403) {
+      toast.error('You do not have permission to cancel this order')
+    } else if (error.response?.status === 400) {
+      toast.error(error.response.data?.message || 'Cannot cancel this order at current status')
+    } else if (error.response?.status === 404) {
+      toast.error('Order not found')
+    } else {
+      toast.error('Failed to cancel order. Please try again.')
+    }
   } finally {
     processing.value = false
   }
