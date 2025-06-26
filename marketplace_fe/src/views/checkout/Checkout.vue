@@ -576,7 +576,7 @@ const processPayment = async () => {
 }
 
 const processCardPayment = async (orderItems) => {
-  // ✅ 1. TẠO PAYMENT METHOD TRƯỚC
+  // 1. Tạo payment method với Stripe
   const { paymentMethod, error } = await stripe.value.createPaymentMethod({
     type: 'card',
     card: cardElement.value,
@@ -585,23 +585,16 @@ const processCardPayment = async (orderItems) => {
       phone: shippingInfo.value.phone,
     },
   })
-  
-  if (error) {
-    throw new Error(error.message)
-  }
+  if (error) throw new Error(error.message)
 
-  // ✅ 2. TẠO ORDER VỚI LOYALTY REDEMPTION
+  // 2. Tạo order
   const orderData = { 
     items: orderItems,
     shippingAddress: shippingInfo.value,
     paymentMethod: 'card',
     paymentMethodId: paymentMethod.id
   }
-  
-  // ✨ NEW: Add redemption if selected
-  if (selectedRedemption.value) {
-    orderData.redemptionId = selectedRedemption.value.id
-  }
+  if (selectedRedemption.value) orderData.redemptionId = selectedRedemption.value.id
 
   let orderResponse, order
   try {
@@ -611,25 +604,29 @@ const processCardPayment = async (orderItems) => {
     throw new Error('Order creation failed: ' + (err.message || 'Unknown error'))
   }
 
-  // ✅ 3. XỬ LÝ PAYMENT TRONG BACKEND
-  if (order.payment?.status === 'COMPLETED') {
+  // 3. Gọi API tạo payment intent
+  let paymentResponse
+  try {
+    paymentResponse = await paymentService.createPaymentIntent({
+      orderId: order.id,
+      paymentMethodId: paymentMethod.id
+    })
+  } catch (err) {
+    // Nếu payment fail, hủy order
+    try { await orderService.cancelOrder(order.id) } catch {}
+    throw new Error('Payment processing failed: ' + (err.response?.data?.message || err.message))
+  }
+
+  // 4. Kiểm tra payment status
+  if (paymentResponse.data.payment.status === 'COMPLETED') {
     await cartStore.clearCart()
-    
-    // ✨ NEW: Refresh loyalty data
-    if (selectedRedemption.value) {
-      await loyaltyStore.fetchSummary()
-    }
-    
+    if (selectedRedemption.value) await loyaltyStore.fetchSummary()
     toast.success('Payment successful! Order placed.')
     router.push(`/orders/${order.id}`)
   } else {
-    // Nếu payment thất bại, gọi API hủy order
-    try {
-      await orderService.cancelOrder(order.id)
-    } catch (cancelErr) {
-      console.error('Failed to cancel order after payment fail:', cancelErr)
-    }
-    throw new Error('Payment processing failed')
+    // Nếu payment chưa completed, hủy order
+    try { await orderService.cancelOrder(order.id) } catch {}
+    throw new Error('Payment not completed')
   }
 }
 
