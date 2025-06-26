@@ -87,6 +87,7 @@ export class PaymentsService {
         clientSecret: paymentIntent.client_secret,
       };
     } catch (error) {
+      console.error('Stripe payment error:', error);
       throw new BadRequestException(error.message);
     }
   }

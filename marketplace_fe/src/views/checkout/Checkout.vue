@@ -623,11 +623,11 @@ const processCardPayment = async (orderItems) => {
     toast.success('Payment successful! Order placed.')
     router.push(`/orders/${order.id}`)
   } else {
-    // Nếu payment thất bại, gọi API xóa order hoàn toàn
+    // Nếu payment thất bại, gọi API hủy order
     try {
-      await orderService.deleteOrder(order.id)
+      await orderService.cancelOrder(order.id)
     } catch (cancelErr) {
-      console.error('Failed to delete order after payment fail:', cancelErr)
+      console.error('Failed to cancel order after payment fail:', cancelErr)
     }
     throw new Error('Payment processing failed')
   }
