@@ -602,10 +602,15 @@ const processCardPayment = async (orderItems) => {
   if (selectedRedemption.value) {
     orderData.redemptionId = selectedRedemption.value.id
   }
-  
-  const orderResponse = await orderService.createOrder(orderData)
-  const order = orderResponse.data
-  
+
+  let orderResponse, order
+  try {
+    orderResponse = await orderService.createOrder(orderData)
+    order = orderResponse.data
+  } catch (err) {
+    throw new Error('Order creation failed: ' + (err.message || 'Unknown error'))
+  }
+
   // ✅ 3. XỬ LÝ PAYMENT TRONG BACKEND
   if (order.payment?.status === 'COMPLETED') {
     await cartStore.clearCart()
@@ -618,6 +623,12 @@ const processCardPayment = async (orderItems) => {
     toast.success('Payment successful! Order placed.')
     router.push(`/orders/${order.id}`)
   } else {
+    // Nếu payment thất bại, gọi API xóa order hoàn toàn
+    try {
+      await orderService.deleteOrder(order.id)
+    } catch (cancelErr) {
+      console.error('Failed to delete order after payment fail:', cancelErr)
+    }
     throw new Error('Payment processing failed')
   }
 }

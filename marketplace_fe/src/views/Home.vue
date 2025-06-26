@@ -38,7 +38,7 @@
           >
             <div class="category-card card hoverable">
               <div class="card-content center-align">
-                <i class="material-icons large category-icon">{{ getCategoryIcon(category.name) }}</i>
+                <component :is="getCategoryIcon(category.name)" class="category-icon" :size="40" />
                 <h5 class="category-name">{{ category.name }}</h5>
                 <p class="category-count">{{ category._count?.products || 0 }} products</p>
               </div>
@@ -97,21 +97,21 @@
         <div class="features-grid">
           <div class="feature-item">
             <div class="feature-card">
-              <i class="material-icons large">security</i>
+              <Shield :size="40" class="feature-icon" />
               <h5>Secure Payments</h5>
               <p>Your transactions are protected with enterprise-grade security</p>
             </div>
           </div>
           <div class="feature-item">
             <div class="feature-card">
-              <i class="material-icons large">local_shipping</i>
+              <Truck :size="40" class="feature-icon" />
               <h5>Fast Delivery</h5>
               <p>Quick and reliable shipping to your doorstep</p>
             </div>
           </div>
           <div class="feature-item">
             <div class="feature-card">
-              <i class="material-icons large">verified_user</i>
+              <UserCheck :size="40" class="feature-icon" />
               <h5>Trusted Sellers</h5>
               <p>All sellers are verified and rated by our community</p>
             </div>
@@ -131,6 +131,8 @@ import productService from '@/services/product.service'
 import ProductCard from '@/components/product/ProductCard.vue'
 import PersonalizedRecommendations from '@/components/recommendation/PersonalizedRecommendations.vue'
 import TrendingProducts from '@/components/recommendation/TrendingProducts.vue'
+// Lucide Icons - chỉ import các icon có thật
+import { Home, Box, Book, Heart, Smile, Shirt, Utensils, UserCheck, Truck, Shield } from 'lucide-vue-next'
 
 // ✅ Stores
 const authStore = useAuthStore()
@@ -142,29 +144,26 @@ const categories = ref([])
 const featuredProducts = ref([])
 const loadingProducts = ref(false)
 
-// Methods
-const getCategoryIcon = (categoryName) => {
-  const icons = {
-    'Electronics': 'devices',
-    'Clothing': 'checkroom',
-    'Books': 'menu_book',
-    'Home': 'home',
-    'Sports': 'pool',
-    'Toys': 'toys',
-    'Fashion': 'style',
-    'Health': 'favorite',
-    'Beauty': 'face',
-    'Food': 'restaurant'
-  }
-  return icons[categoryName] || 'category'
+// Lucide icon map (chỉ dùng icon có thật)
+const categoryIcons = {
+  'Electronics': Box,        // Box đại diện cho thiết bị
+  'Clothing': Shirt,
+  'Books': Book,
+  'Home': Home,
+  'Sports': Box,             // Không có Pool, dùng Box
+  'Toys': Box,               // Không có ToyBrick, dùng Box
+  'Fashion': Shirt,
+  'Health': Heart,
+  'Beauty': Smile,
+  'Food': Utensils
 }
+const getCategoryIcon = (categoryName) => categoryIcons[categoryName] || Box
 
 const fetchFeaturedProducts = async () => {
   loadingProducts.value = true
   try {
     const response = await productService.getProducts({ 
-      limit: 8,
-      sort: 'rating' 
+      limit: 8
     })
     featuredProducts.value = response.data.data || response.data
   } catch (error) {
@@ -431,7 +430,7 @@ onMounted(async () => {
       box-shadow: 0 8px 25px rgba(0,0,0,0.15);
     }
     
-    i {
+    .feature-icon {
       color: #1976d2;
       margin-bottom: 25px;
       transition: color 0.3s ease;
@@ -451,7 +450,7 @@ onMounted(async () => {
       font-size: 1rem;
     }
     
-    &:hover i {
+    &:hover .feature-icon {
       color: #ff9800;
     }
   }
