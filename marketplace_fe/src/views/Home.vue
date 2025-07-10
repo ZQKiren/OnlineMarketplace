@@ -167,7 +167,7 @@ const fetchFeaturedProducts = async () => {
     })
     featuredProducts.value = response.data.data || response.data
   } catch (error) {
-    console.error('Error fetching featured products:', error)
+    // XÓA console.error không cần thiết
   } finally {
     loadingProducts.value = false
   }
@@ -195,7 +195,7 @@ onMounted(async () => {
       await recommendationStore.initializeRecommendations()
     }
   } catch (error) {
-    console.error('Error initializing home page:', error)
+    // XÓA console.error không cần thiết
   }
 })
 </script>

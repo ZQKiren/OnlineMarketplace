@@ -139,7 +139,6 @@ const loadReviews = async () => {
     const response = await reviewService.getMyReviews()
     reviews.value = response.data
   } catch (err) {
-    console.error('Error loading reviews:', err)
     error.value = err.response?.data?.message || 'Failed to load reviews'
   } finally {
     loading.value = false
@@ -198,7 +197,6 @@ const updateReview = async () => {
     closeEditModal()
     alert('Review updated successfully!')
   } catch (err) {
-    console.error('Error updating review:', err)
     alert(err.response?.data?.message || 'Failed to update review')
   } finally {
     updatingReview.value = false
@@ -215,7 +213,6 @@ const deleteReview = async (reviewId) => {
     reviews.value = reviews.value.filter(r => r.id !== reviewId)
     alert('Review deleted successfully!')
   } catch (err) {
-    console.error('Error deleting review:', err)
     alert(err.response?.data?.message || 'Failed to delete review')
   }
 }

@@ -28,16 +28,13 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
   async handleConnection(client: Socket) {
     try {
-      console.log(`🔌 New socket connection: ${client.id}`);
       
       const token = client.handshake.auth?.token || 
                    client.handshake.headers?.authorization?.replace('Bearer ', '') ||
                    client.request?.headers?.authorization?.replace('Bearer ', '');
       
-      console.log('🔍 Token received:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
       
       if (!token) {
-        console.log('❌ No token provided, disconnecting client');
         client.emit('error', { message: 'Authentication token required' });
         client.disconnect();
         return;
@@ -47,7 +44,7 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
       const payload = this.jwtService.verify(token);
       const userId = payload.sub || payload.userId || payload.id;
       
-      console.log('✅ Token verified for user:', userId);
+      
 
       // Store user connection
       if (!this.connectedUsers.has(userId)) {
@@ -58,9 +55,8 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
       // Join user to their personal room
       await client.join(`user_${userId}`);
       
-      console.log(`✅ User ${userId} connected via socket ${client.id}`);
-      console.log(`👥 Total connected users: ${this.connectedUsers.size}`);
       
+
       // Store userId in socket for later use
       client.data.userId = userId;
 
@@ -88,8 +84,6 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
       }
     }
     
-    console.log(`🔌 Socket ${client.id} disconnected (User: ${userId})`);
-    console.log(`👥 Remaining connected users: ${this.connectedUsers.size}`);
   }
 
   @SubscribeMessage('join-notifications')
@@ -97,7 +91,6 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
     const userId = client.data.userId;
     if (userId) {
       client.join(`notifications_${userId}`);
-      console.log(`📬 User ${userId} joined notifications room`);
       client.emit('joined-notifications', { success: true });
     } else {
       client.emit('error', { message: 'Not authenticated' });
@@ -106,19 +99,16 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
   @SubscribeMessage('ping')
   handlePing(@ConnectedSocket() client: Socket) {
-    console.log(`🏓 Ping from ${client.id}`);
     client.emit('pong', { timestamp: Date.now() });
   }
 
   @SubscribeMessage('join-room')
   handleJoinRoom(@ConnectedSocket() client: Socket, room: string) {
     client.join(room);
-    console.log(`👥 Socket ${client.id} joined room: ${room}`);
   }
 
   // ✅ FIX: Send notification to specific users
   sendToUsers(userIds: string[], notification: any): number {
-    console.log(`📨 Sending notification to users:`, { userIds, title: notification.title });
     
     let sentCount = 0;
     userIds.forEach(userId => {
@@ -127,30 +117,23 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
         // Send to user's personal room
         this.server.to(`user_${userId}`).emit('new-notification', notification);
         sentCount++;
-        console.log(`✅ Sent to user ${userId} (${userSockets.size} connections)`);
       } else {
-        console.log(`⚠️ User ${userId} not connected`);
       }
     });
     
-    console.log(`📊 Notification sent to ${sentCount}/${userIds.length} connected users`);
     return sentCount;
   }
 
   // ✅ FIX: Send global notification
   sendGlobalNotification(notification: any): number {
-    console.log(`📢 Sending global notification:`, notification.title);
-    console.log(`👥 Broadcasting to ${this.connectedUsers.size} connected users`);
     
     this.server.emit('new-notification', notification);
     
-    console.log(`✅ Global notification broadcasted`);
     return this.connectedUsers.size;
   }
 
   // ✅ FIX: Send notification count update
   sendUnreadCountUpdate(userId: string, unreadCount: number) {
-    console.log(`📊 Updating unread count for user ${userId}: ${unreadCount}`);
     this.server.to(`user_${userId}`).emit('unread-count-update', { 
       unreadCount,
       timestamp: Date.now() 
@@ -159,7 +142,6 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
   // ✅ FIX: ADD MISSING METHOD - Send notification read confirmation
   sendNotificationRead(userId: string, notificationId: string) {
-    console.log(`✅ Notification read by user ${userId}: ${notificationId}`);
     this.server.to(`user_${userId}`).emit('notification-read', { 
       notificationId,
       timestamp: Date.now() 
@@ -195,7 +177,6 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
       )
     };
     
-    console.log('📊 Connection Status:', status);
     return status;
   }
 
@@ -209,7 +190,6 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
   // ✅ FIX: Add method to send system announcements
   sendSystemAnnouncement(announcement: any) {
-    console.log(`📢 Sending system announcement:`, announcement.title);
     this.server.emit('system-announcement', announcement);
     return this.connectedUsers.size;
   }
@@ -226,7 +206,6 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
         }
       });
       this.connectedUsers.delete(userId);
-      console.log(`🔨 Force disconnected user ${userId}:`, reason);
     }
   }
 

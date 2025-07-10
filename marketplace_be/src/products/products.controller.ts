@@ -52,7 +52,6 @@ export class ProductsController {
     
     if ((files?.length ?? 0) > 0) {
       // 🌩️ Upload to Cloudinary
-      console.log('📤 Uploading to Cloudinary...');
       
       const uploadPromises = (files ?? []).map(file => {
         return new Promise<string>((resolve, reject) => {
@@ -68,10 +67,8 @@ export class ProductsController {
             },
             (error, result) => {
               if (error) {
-                console.error('❌ Cloudinary error:', error);
                 reject(error);
               } else {
-                console.log('✅ Uploaded to Cloudinary:', result!.secure_url);
                 resolve(result!.secure_url);
               }
             }
@@ -103,14 +100,48 @@ export class ProductsController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  update(
+  @UseInterceptors(FilesInterceptor('images', 10))
+  async update(
     @Param('id') id: string,
     @CurrentUser() user: any,
     @Body() updateProductDto: UpdateProductDto,
+    @UploadedFiles() files?: Express.Multer.File[],
   ) {
+    // Xử lý upload ảnh mới nếu có (giống create)
+    let imageUrls: string[] = [];
+    if ((files?.length ?? 0) > 0) {
+      const uploadPromises = (files ?? []).map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const random8digits = Math.floor(Math.random() * 100000000).toString().padStart(8, '0');
+          const publicId = `product_${random8digits}`;
+          cloudinary.uploader.upload_stream(
+            {
+              resource_type: 'image',
+              public_id: publicId,
+              folder: 'marketplace'
+            },
+            (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result!.secure_url);
+              }
+            }
+          ).end(file.buffer);
+        });
+      });
+      imageUrls = await Promise.all(uploadPromises);
+    }
+    // Tạo payload mới, thêm images nếu có ảnh mới
+    const productUpdatePayload = {
+      ...updateProductDto,
+      images: imageUrls.length > 0
+        ? [ ...(updateProductDto.images || []), ...imageUrls ]
+        : updateProductDto.images
+    };
     return this.productsService.update(
       id,
-      updateProductDto,
+      productUpdatePayload,
       user.id,
       user.role === Role.ADMIN,
     );

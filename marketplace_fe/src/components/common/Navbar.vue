@@ -53,7 +53,8 @@
             <li class="nav-item user-dropdown-item">
               <a class="dropdown-trigger nav-link user-trigger" href="#!" data-target="user-dropdown"
                 @click.prevent="handleDropdownClick" :class="{ active: showDropdown }" :aria-expanded="showDropdown">
-                <UserCircle class="user-icon" />
+                <img v-if="authStore.user?.avatar" :src="authStore.user.avatar" alt="avatar" class="navbar-avatar" @error="onAvatarError" />
+                <UserCircle v-else class="user-icon" />
                 <span class="user-name">{{ authStore.user?.name || 'User' }}</span>
                 <ChevronDown class="dropdown-arrow" />
               </a>
@@ -364,6 +365,10 @@ const handleAvatarError = (event) => {
   event.target.src = '/placeholder-avatar.svg'
 }
 
+const onAvatarError = (e) => {
+  e.target.src = '/placeholder-avatar.svg'
+}
+
 // Setup functions
 const setupNotifications = () => {
   if (!authStore.isAuthenticated) return
@@ -529,6 +534,8 @@ onUnmounted(() => {
       position: relative; // Quan trọng: đảm bảo nav-item có relative positioning
 
       .nav-link {
+        display: flex;
+        align-items: center;
         position: relative; // Đảm bảo nav-link cũng có relative positioning
 
         // Cart và Messages links cần special handling
@@ -568,6 +575,11 @@ onUnmounted(() => {
               line-height: 12px;
             }
           }
+        }
+        .nav-icon {
+          margin-right: 8px;
+          width: 20px;
+          height: 20px;
         }
       }
     }
@@ -622,100 +634,97 @@ onUnmounted(() => {
 // User dropdown z-index
 .user-dropdown-menu {
   min-width: 280px;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(25, 118, 210, 0.15);
   border: 1px solid #e0e0e0;
   overflow: hidden;
   position: relative;
   z-index: 950;
+  background: #fff;
 
   .dropdown-header {
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-bottom: 1px solid #dee2e6;
-
+    padding: 20px 24px 14px 24px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e3eaf5 100%);
+    border-bottom: 2px solid #e3eaf5;
+    display: flex;
+    align-items: center;
+    gap: 14px;
     .user-info {
       display: flex;
       align-items: center;
-      gap: 12px;
-
+      gap: 14px;
       .user-avatar {
-        width: 36px;
-        height: 36px;
-        color: #6c757d;
+        width: 44px;
+        height: 44px;
+        color: #1976d2;
       }
-
       .user-details {
         display: flex;
         flex-direction: column;
-
         .user-display-name {
-          font-weight: 600;
-          color: #333;
-          font-size: 16px;
+          font-weight: 700;
+          color: #222;
+          font-size: 18px;
           margin-bottom: 2px;
         }
-
         .user-email {
           color: #6c757d;
-          font-size: 12px;
+          font-size: 13px;
         }
       }
     }
   }
-
   .dropdown-link {
     display: flex;
     align-items: center;
-    padding: 12px 20px;
+    padding: 14px 24px;
     color: #333;
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
     position: relative;
-
+    font-size: 15px;
+    gap: 12px;
     &:hover {
-      background: #f8f9fa;
+      background: #f5faff;
       color: #1976d2;
-      transform: translateX(4px);
+      .dropdown-icon {
+        color: #1976d2;
+      }
     }
-
     .dropdown-icon {
       margin-right: 12px;
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
+      color: #90a4ae;
+      transition: color 0.2s;
     }
-
     .dropdown-badge {
       margin-left: auto;
       background: #f44336;
       color: white;
       border-radius: 8px;
-      padding: 2px 6px;
-      font-size: 10px;
-      font-weight: 600;
-      min-width: 16px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 18px;
       text-align: center;
+      box-shadow: 0 2px 8px rgba(244,67,54,0.12);
     }
-
     &.admin-link {
       color: #ff9800;
-
       &:hover {
         background: #fff3e0;
         color: #f57c00;
       }
     }
-
     &.logout-link {
       color: #f44336;
-
       &:hover {
         background: #ffebee;
         color: #d32f2f;
       }
     }
   }
-
   .divider {
     height: 1px;
     background: #dee2e6;
@@ -1016,5 +1025,15 @@ onUnmounted(() => {
     transform: translateX(0);
     opacity: 1;
   }
+}
+
+.navbar-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 8px;
+  border: 1.5px solid #e3eaf5;
+  background: #fff;
 }
 </style>

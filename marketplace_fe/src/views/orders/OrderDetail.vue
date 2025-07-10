@@ -774,7 +774,6 @@ const fetchOrder = async () => {
     const response = await orderService.getOrderById(orderId.value)
     order.value = response.data
   } catch (error) {
-    console.error('Error fetching order:', error)
     toast.error('Failed to load order details')
   } finally {
     loading.value = false
@@ -799,8 +798,6 @@ const cancelOrder = async () => {
     await fetchOrder()
     
   } catch (error) {
-    console.error('Error cancelling order:', error)
-    
     // Xử lý các loại lỗi khác nhau
     if (error.response?.status === 403) {
       toast.error('You do not have permission to cancel this order')
@@ -826,7 +823,6 @@ const updateOrderStatus = async () => {
     newStatus.value = ''
     toast.success('Order status updated successfully')
   } catch (error) {
-    console.error('Error updating order status:', error)
     toast.error('Failed to update order status')
   } finally {
     processing.value = false
@@ -844,7 +840,6 @@ const completeCODPayment = async () => {
     }
     toast.success('COD payment marked as completed')
   } catch (error) {
-    console.error('Error completing COD payment:', error)
     toast.error('Failed to complete COD payment')
   } finally {
     processing.value = false
@@ -874,7 +869,6 @@ const reorderItems = async () => {
     toast.success(`Items added to cart! You'll earn ${calculateReorderPoints()} points with this reorder.`)
     router.push('/cart')
   } catch (error) {
-    console.error('Error reordering items:', error)
     toast.error('Failed to reorder items')
   }
 }
@@ -920,7 +914,7 @@ onMounted(async () => {
     try {
       await loyaltyStore.initialize()
     } catch (error) {
-      console.error('Error loading loyalty data:', error)
+      // Xử lý lỗi nếu cần
     }
   }
   

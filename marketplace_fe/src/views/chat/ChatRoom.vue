@@ -318,8 +318,6 @@ export default {
     const handleChatSelected = async (chat) => {
       if (selectedChat.value?.id === chat.id) return
       
-      console.log('💬 ChatRoom selecting chat:', chat.id)
-      
       // Leave previous chat room
       if (selectedChat.value) {
         socketService.leaveChat(selectedChat.value.id)
@@ -347,7 +345,6 @@ export default {
       if (!selectedChat.value) return
       
       try {
-        console.log('📨 ChatRoom loading messages for:', selectedChat.value.id)
         
         currentPage.value = 1
         const response = await chatStore.fetchMessages(selectedChat.value.id, 1, 50)
@@ -388,12 +385,10 @@ export default {
       sending.value = true
       
       try {
-        console.log('📤 ChatRoom sending message:', content)
         
         // ✅ FIXED: Use centralized store method
         await chatStore.sendMessage(selectedChat.value.id, content)
         
-        console.log('✅ ChatRoom message sent via store')
         clearTyping()
       } catch (error) {
         console.error('❌ ChatRoom error sending message:', error)
@@ -474,7 +469,6 @@ export default {
     
     // Socket event handlers - These are handled by the centralized store now
     const handleNewMessage = (message) => {
-      console.log('📨 ChatRoom received new message (handled by store):', message.id)
       if (message.chatId === selectedChat.value?.id) {
         socketService.markRead(selectedChat.value.id)
         nextTick(() => scrollToBottom())
@@ -494,7 +488,6 @@ export default {
     const handleMessagesRead = (data) => {
       if (data.chatId === selectedChat.value?.id) {
         // Messages read indicators would be updated here
-        console.log('✅ Messages read by:', data.userId)
       }
     }
     
@@ -507,7 +500,6 @@ export default {
     
     // Lifecycle
     onMounted(async () => {
-      console.log('🔧 ChatRoom mounted')
       
       // Setup socket listeners (for UI-specific events)
       socketService.onNewMessage(handleNewMessage)
@@ -535,7 +527,6 @@ export default {
     })
     
     onUnmounted(() => {
-      console.log('🔧 ChatRoom unmounted')
       
       // Clean up socket listeners
       socketService.off('new-message', handleNewMessage)
@@ -780,92 +771,85 @@ export default {
   }
 }
 
+/* BUBBLE CHAT STYLE */
 .message {
   display: flex;
-  
+  align-items: flex-end;
+  margin-bottom: 10px;
   &.own-message {
-    justify-content: flex-end;
-    
+    flex-direction: row-reverse;
     .message-content {
-      background: $primary-color;
-      color: white;
-      margin-left: 60px;
-      
-      .message-header .sender-name {
-        color: rgba(255, 255, 255, 0.9);
-      }
-      
-      .message-meta .message-time {
-        color: rgba(255, 255, 255, 0.8);
-      }
-      
-      .read-indicator {
-        color: rgba(255, 255, 255, 0.9);
-      }
+      background: #1976d2;
+      color: #fff;
+      border-radius: 18px 18px 4px 18px;
+      margin-left: 40px;
+      margin-right: 0;
+      align-items: flex-end;
+    }
+    .sender-avatar {
+      margin-left: 8px;
+      margin-right: 0;
+    }
+    .message-meta {
+      justify-content: flex-end;
+      color: #e3eaf5;
     }
   }
-  
   &.system-message {
     justify-content: center;
-    
     .message-content {
-      background: #e3f2fd;
-      color: #1976d2;
-      font-style: italic;
-      font-size: 0.85rem;
-      max-width: 70%;
+      background: transparent;
+      color: #888;
+      border: none;
       text-align: center;
+      font-style: italic;
+      box-shadow: none;
     }
   }
-  
   .message-content {
-    background: #f0f0f0;
-    border-radius: 12px;
-    padding: $spacing-sm $spacing-md;
-    max-width: 70%;
-    margin-right: 60px;
-    
+    max-width: 75vw;
+    background: #f1f3f6;
+    color: #222;
+    border-radius: 18px 18px 18px 4px;
+    padding: 10px 16px;
+    box-shadow: 0 2px 8px rgba(25,118,210,0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+    word-break: break-word;
+    font-size: 1rem;
+    margin-right: 40px;
+    margin-left: 0;
     .message-header {
       display: flex;
       align-items: center;
-      gap: $spacing-xs;
-      margin-bottom: $spacing-xs;
-      
+      margin-bottom: 2px;
       .sender-avatar {
-        width: 20px;
-        height: 20px;
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
         object-fit: cover;
+        margin-right: 8px;
       }
-      
       .sender-name {
-        font-size: 0.75rem;
+        font-size: 0.95rem;
         font-weight: 600;
-        color: #666;
+        color: #1976d2;
       }
     }
-    
     .message-body {
       p {
-        margin: 0 0 $spacing-xs 0;
-        line-height: 1.4;
-        word-wrap: break-word;
+        margin: 0 0 4px 0;
+        line-height: 1.5;
       }
-      
       .message-meta {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        
-        .message-time {
-          font-size: 0.7rem;
-          color: #999;
-        }
-        
-        .read-indicator {
-          font-size: 0.9rem;
-          color: #4caf50;
-        }
+        gap: 8px;
+        font-size: 0.8rem;
+        color: #888;
+        margin-top: 2px;
       }
     }
   }
@@ -1009,6 +993,97 @@ export default {
     .message-content {
       margin-right: 20px;
       max-width: 85%;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .chat-room-container {
+    padding: 0 !important;
+    .container {
+      padding: 0 !important;
+      max-width: 100vw !important;
+    }
+    .row {
+      margin: 0 !important;
+    }
+  }
+  .chat-sidebar {
+    border-radius: 0;
+    min-width: 100vw;
+    max-width: 100vw;
+    padding: 0;
+  }
+  .chat-main {
+    border-radius: 0;
+    min-width: 100vw;
+    max-width: 100vw;
+    padding: 0;
+    .chat-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #fff;
+      padding: 16px 10px 12px 10px;
+      .back-btn {
+        font-size: 1.5rem;
+        margin-right: 10px;
+        padding: 8px;
+      }
+      .user-avatar {
+        width: 36px;
+        height: 36px;
+      }
+      .user-details h6 {
+        font-size: 1.1rem;
+      }
+    }
+    .product-context {
+      display: none; // Ẩn product context trên mobile nếu chiếm chỗ
+    }
+    .messages-area {
+      .messages-container {
+        min-height: 60vh;
+        max-height: 60vh;
+        padding: 10px 4px;
+      }
+      .message-input-area {
+        padding: 8px 4px;
+        .input-container {
+          .message-input {
+            font-size: 1rem;
+            padding: 12px 16px;
+          }
+          .send-btn {
+            width: 48px;
+            height: 48px;
+            font-size: 1.3rem;
+          }
+        }
+      }
+    }
+    .message {
+      .message-content {
+        font-size: 1rem;
+        .sender-avatar {
+          width: 28px;
+          height: 28px;
+        }
+        .sender-name {
+          font-size: 0.95rem;
+        }
+      }
+    }
+    .message .message-content {
+      max-width: 90vw;
+      font-size: 0.98rem;
+      padding: 10px 12px;
+    }
+    .message.own-message .message-content {
+      margin-left: 24px;
+    }
+    .message:not(.own-message) .message-content {
+      margin-right: 24px;
     }
   }
 }

@@ -223,7 +223,7 @@ const handleImageError = (event) => {
 }
 
 const handleImageLoad = (event) => {
-  console.log('✅ Image loaded:', event.target.src)
+  // XÓA console.log và console.error không cần thiết
 }
 
 // Computed stats
@@ -262,7 +262,6 @@ const fetchProducts = async () => {
       }
     })
   } catch (error) {
-    console.error('Error fetching products:', error)
     toast.error('Failed to load products. Please try again.')
   } finally {
     loading.value = false
@@ -277,7 +276,6 @@ const deleteProduct = async (productId) => {
     toast.success('Product deleted successfully')
     await fetchProducts()
   } catch (error) {
-    console.error('Error deleting product:', error)
     toast.error('Failed to delete product. Please try again.')
   }
 }

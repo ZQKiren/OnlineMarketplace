@@ -63,7 +63,6 @@ export class UsersController {
     
     try {
       // 🌩️ Upload to Cloudinary
-      console.log('📤 Uploading avatar to Cloudinary...');
       
       const uploadResult = await new Promise<string>((resolve, reject) => {
         // Generate filename for avatar: avatar + 8 random digits
@@ -82,10 +81,8 @@ export class UsersController {
           },
           (error, result) => {
             if (error) {
-              console.error('❌ Cloudinary error:', error);
               reject(error);
             } else {
-              console.log('✅ Avatar uploaded to Cloudinary:', result!.secure_url);
               resolve(result!.secure_url);
             }
           }
@@ -95,7 +92,6 @@ export class UsersController {
       avatarUrl = uploadResult;
       
     } catch (error) {
-      console.error('Error uploading avatar:', error);
       throw new Error('Failed to upload avatar');
     }
 

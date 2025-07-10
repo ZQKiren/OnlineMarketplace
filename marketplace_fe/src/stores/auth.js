@@ -30,8 +30,6 @@ export const useAuthStore = defineStore('auth', () => {
   const initialize = async () => {
     if (isInitialized.value) return
     
-    console.log('🔐 Auth Store: Initializing...')
-    
     // If we have a token, try to load user profile
     if (token.value) {
       try {
@@ -40,18 +38,13 @@ export const useAuthStore = defineStore('auth', () => {
         
         // Check if user is blocked after profile fetch
         if (user.value?.isBlocked) {
-          console.log('🚫 Auth Store: User is blocked during initialization')
           logout()
           return
         }
         
-        console.log('✅ Auth Store: Initialization successful for:', user.value?.name)
       } catch (error) {
-        console.error('❌ Auth Store: Initialization failed:', error.message)
-        
         // Check if it's a blocked user error
         if (error.response?.status === 403 && error.response?.data?.blocked) {
-          console.log('🚫 Auth Store: User blocked during initialization')
           logout()
           return
         }
@@ -66,17 +59,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
     
     isInitialized.value = true
-    console.log('✅ Auth Store: Initialization complete')
   }
 
   async function login(credentials) {
     try {
-      console.log('🔐 Auth Store: Logging in user:', credentials.email)
       const response = await authService.login(credentials)
       
       // ✅ Check if user is blocked in response
       if (response.data.user?.isBlocked) {
-        console.log('🚫 Auth Store: User is blocked in login response')
         throw new Error('Your account has been blocked. Please contact support.')
       }
       
@@ -85,15 +75,11 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('token', response.data.token)
       isInitialized.value = true
       
-      console.log('✅ Auth Store: Login successful for:', user.value.name)
       router.push('/')
       return response
     } catch (error) {
-      console.error('❌ Auth Store: Login failed:', error.message)
-      
       // ✅ Handle blocked user during login - don't set any auth data
       if (error.response?.status === 403 && error.response?.data?.blocked) {
-        console.log('🚫 Auth Store: Clearing auth data for blocked user')
         token.value = null
         user.value = null
         localStorage.removeItem('token')
@@ -105,12 +91,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function register(userData) {
     try {
-      console.log('📝 Auth Store: Registering user:', userData.email)
       const response = await authService.register(userData)
       
       // ✅ Check if newly registered user is somehow blocked
       if (response.data.user?.isBlocked) {
-        console.log('🚫 Auth Store: New user is blocked in registration response')
         throw new Error('Account registration failed. Please contact support.')
       }
       
@@ -119,23 +103,18 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('token', response.data.token)
       isInitialized.value = true
       
-      console.log('✅ Auth Store: Registration successful for:', user.value.name)
       router.push('/')
       return response
     } catch (error) {
-      console.error('❌ Auth Store: Registration failed:', error.message)
       throw error
     }
   }
 
   function logout() {
-    console.log('🔐 Auth Store: Logging out user')
     user.value = null
     token.value = null
     localStorage.removeItem('token')
     isInitialized.value = false
-    
-    console.log('✅ Auth Store: Logout successful')
     
     // Only redirect if not already on auth pages
     const currentPath = router.currentRoute.value.path
@@ -146,30 +125,23 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchProfile() {
     if (!token.value) {
-      console.log('⚠️ Auth Store: No token available for profile fetch')
       return
     }
     
     try {
-      console.log('👤 Auth Store: Fetching user profile')
       const response = await authService.getProfile()
       
       // ✅ Check if user became blocked
       if (response.data.isBlocked) {
-        console.log('🚫 Auth Store: User is blocked in profile response')
         logout()
         throw new Error('Your account has been blocked. Please contact support.')
       }
       
       user.value = response.data
-      console.log('✅ Auth Store: Profile loaded for:', user.value.name)
       return response
     } catch (error) {
-      console.error('❌ Auth Store: Profile fetch failed:', error.message)
-      
       // ✅ Handle blocked user in profile fetch
       if (error.response?.status === 403 && error.response?.data?.blocked) {
-        console.log('🚫 Auth Store: Profile fetch blocked - logging out')
         logout()
         return null
       }
@@ -196,7 +168,6 @@ export const useAuthStore = defineStore('auth', () => {
   // ✅ NEW: Force logout if user is blocked
   const forceLogoutIfBlocked = () => {
     if (user.value?.isBlocked) {
-      console.log('🚫 Auth Store: Force logout - User is blocked')
       logout()
       return true
     }
@@ -211,7 +182,6 @@ export const useAuthStore = defineStore('auth', () => {
       await fetchProfile()
     } catch (error) {
       // If blocked, logout will be handled in fetchProfile
-      console.log('⚠️ Auth Store: Failed to refresh user data:', error.message)
     }
   }
 

@@ -450,101 +450,66 @@ onUnmounted(() => {
 
 .notification-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: 120%;
   right: 0;
-  width: 320px;
-  max-width: 90vw;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  border: 1px solid #e0e0e0;
-  max-height: 450px;
-  overflow: hidden;
-  animation: dropdownSlide 0.3s ease;
+  min-width: 360px;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(25, 118, 210, 0.12);
+  padding: 0;
+  margin-top: 0;
+  border: 1px solid #e3eaf5;
+  animation: dropdownSlide 0.25s cubic-bezier(0.4,0,0.2,1);
+  z-index: 1200;
 }
-
 .notification-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  justify-content: space-between;
+  padding: 18px 20px 10px 20px;
   border-bottom: 1px solid #f0f0f0;
-  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-
-  .notification-title {
-    margin: 0;
-    color: #333;
-    font-size: 14px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-
-    .title-icon {
-      width: 18px;
-      height: 18px;
-      color: #1976d2;
-    }
-
-    .unread-count {
-      color: #f44336;
-      font-size: 12px;
-      font-weight: 500;
-    }
-  }
-
-  .notification-actions {
-    display: flex;
-    gap: 4px;
-  }
-
-  .action-btn {
-    background: none;
-    border: none;
-    padding: 6px;
-    border-radius: 50%;
-    cursor: pointer;
-    color: #666;
-    transition: all 0.2s ease;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &:hover {
-      background: #e3f2fd;
-      color: #1976d2;
-      transform: scale(1.1);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .action-icon {
-      width: 14px;
-      height: 14px;
-
-      &.spinning {
-        animation: spin 1s linear infinite;
-      }
-    }
-
-    &.mark-all-btn {
-      color: #4caf50;
-
-      &:hover {
-        background: #e8f5e8;
-        color: #2e7d32;
-      }
-    }
+  background: linear-gradient(90deg, #f8fafc 0%, #e3eaf5 100%);
+  border-radius: 14px 14px 0 0;
+}
+.notification-title {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1976d2;
+  gap: 8px;
+}
+.title-icon {
+  width: 20px;
+  height: 20px;
+  color: #1976d2;
+}
+.unread-count {
+  color: #f44336;
+  font-weight: 700;
+  margin-left: 4px;
+}
+.notification-actions {
+  display: flex;
+  gap: 8px;
+}
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.2s;
+  &:hover {
+    background: #e3eaf5;
   }
 }
-
+.action-icon {
+  width: 18px;
+  height: 18px;
+  color: #1976d2;
+}
 .notification-loading {
   padding: 40px 20px;
   text-align: center;
@@ -610,8 +575,9 @@ onUnmounted(() => {
 }
 
 .notification-list {
-  max-height: 280px;
+  max-height: 340px;
   overflow-y: auto;
+  padding: 0 4px 0 0;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -633,24 +599,24 @@ onUnmounted(() => {
 
 .notification-item {
   display: flex;
-  padding: 10px 16px;
-  border-bottom: 1px solid #f5f5f5;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 20px 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s;
   position: relative;
-
   &:hover {
-    background: #f8f9fa;
-    transform: translateX(2px);
-  }
-
-  &.unread {
-    background: linear-gradient(90deg, #f3f8ff 0%, #ffffff 100%);
-    border-left: 3px solid #1976d2;
-
-    &:hover {
-      background: linear-gradient(90deg, #e3f2fd 0%, #f8f9fa 100%);
+    background: #f5faff;
+    .notification-type-icon {
+      color: #1976d2;
     }
+  }
+  &.unread {
+    background: #e3f2fd;
+    border-left: 4px solid #1976d2;
+    font-weight: 600;
   }
 
   &.priority-high {
@@ -683,9 +649,11 @@ onUnmounted(() => {
   padding-top: 2px;
   
   .notification-type-icon {
-    width: 16px;
-    height: 16px;
-    color: #666;
+    width: 22px;
+    height: 22px;
+    color: #90a4ae;
+    flex-shrink: 0;
+    transition: color 0.2s;
     
     // Icon color coding
     &.icon-order { color: #2196f3; }
@@ -704,65 +672,50 @@ onUnmounted(() => {
 .notification-content {
   flex: 1;
   min-width: 0;
+}
+.notification-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 2px 0;
+  color: #222;
+  line-height: 1.2;
+}
+.notification-message {
+  font-size: 12px;
+  color: #555;
+  margin: 0 0 4px 0;
+  line-height: 1.4;
+}
+.notification-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: #999;
+  align-items: center;
 
-  .notification-item-title {
-    margin: 0 0 3px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #333;
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .notification-message {
-    margin: 0 0 6px;
-    font-size: 12px;
-    color: #666;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .notification-meta {
-    display: flex;
-    gap: 8px;
-    font-size: 10px;
-    color: #999;
-    align-items: center;
-
-    .notification-type {
-      background: #e3f2fd;
-      color: #1976d2;
-      padding: 1px 6px;
-      border-radius: 6px;
-      font-weight: 500;
-      font-size: 9px;
-    }
+  .notification-type {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 9px;
   }
 }
-
 .unread-indicator {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   background: #1976d2;
   border-radius: 50%;
   margin-left: 8px;
-  flex-shrink: 0;
-  margin-top: 10px;
+  margin-top: 8px;
   box-shadow: 0 0 4px rgba(25, 118, 210, 0.4);
 }
-
 .notification-footer {
-  padding: 10px 16px;
+  padding: 12px 20px;
   border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  background: #f8fafc;
+  border-radius: 0 0 14px 14px;
 
   .view-all-btn {
     width: 100%;
@@ -772,23 +725,21 @@ onUnmounted(() => {
     padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    transition: all 0.2s ease;
-
+    transition: all 0.2s;
     &:hover {
       background: #1976d2;
       color: white;
       transform: translateY(-1px);
     }
-
     .view-all-icon {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
     }
   }
 }

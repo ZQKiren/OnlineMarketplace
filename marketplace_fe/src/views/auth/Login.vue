@@ -72,9 +72,8 @@
 
           <div class="form-options">
             <label class="remember-me">
-              <input type="checkbox" v-model="rememberMe">
-              <span class="checkmark"></span>
-              Remember me
+              <input type="checkbox" v-model="rememberMe" class="filled-in" />
+              <span>Remember me</span>
             </label>
             <router-link to="/forgot-password" class="forgot-link">
               Forgot password?
@@ -173,10 +172,7 @@ const errors = reactive({
 
 // ✅ Check if redirected due to blocked account
 onMounted(() => {
-  console.log('🔍 Login: Checking for blocked redirect query:', route.query.blocked)
-  
   if (route.query.blocked === 'true') {
-    console.log('🚫 Login: User redirected due to blocked account')
     isBlockedRedirect.value = true
     errorMessage.value = '' // Clear any other error messages
     
@@ -234,16 +230,13 @@ const handleLogin = async () => {
   clearAllErrors()
   
   try {
-    console.log('🔐 Login: Attempting login for:', form.value.email)
     await authStore.login(form.value)
     
     toast.success('Welcome back!')
     
     const redirectTo = route.query.redirect || '/'
-    console.log('✅ Login: Redirecting to:', redirectTo)
     router.push(redirectTo)
   } catch (error) {
-    console.error('❌ Login: Login failed:', error)
     
     if (error.response) {
       const status = error.response.status
@@ -259,7 +252,6 @@ const handleLogin = async () => {
         case 403:
           // ✅ Enhanced blocked user handling
           if (data.blocked || (data.message && data.message.toLowerCase().includes('blocked'))) {
-            console.log('🚫 Login: User account is blocked')
             isBlockedRedirect.value = true
             errorMessage.value = '' // Clear error message as we show blocked alert
             toast.error('Your account has been blocked. Please contact support.')

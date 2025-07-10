@@ -535,7 +535,6 @@ const fetchCategories = async () => {
   try {
     const response = await adminService.getAllCategories()
     categories.value = response.data
-    console.log('Categories loaded:', categories.value.length)
   } catch (error) {
     console.error('Error fetching categories:', error)
     toast.error('Không thể tải danh sách danh mục')
@@ -548,7 +547,6 @@ const refreshCategories = async () => {
   try {
     const response = await adminService.getAllCategories()
     categories.value = response.data
-    console.log('Categories refreshed:', categories.value.length)
   } catch (error) {
     console.error('Error refreshing categories:', error)
     toast.error('Không thể làm mới danh sách danh mục')
@@ -663,7 +661,7 @@ const saveCategory = async () => {
         try {
           await adminService.uploadCategoryImage(response.data.id, categoryImage.value)
         } catch (imgError) {
-          console.warn('Failed to upload category image:', imgError)
+          console.error('Failed to upload category image:', imgError)
         }
       }
       

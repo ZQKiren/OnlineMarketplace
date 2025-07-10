@@ -438,7 +438,6 @@ const fetchProduct = async () => {
       await checkCanReview()
     }
   } catch (err) {
-    console.error('Error fetching product:', err)
     error.value = err.response?.data?.message || 'Product not found'
   } finally {
     loading.value = false
@@ -486,7 +485,6 @@ const addToCart = async () => {
     toast.success(`Added ${quantity.value} item(s) to cart!`)
     quantity.value = 1
   } catch (err) {
-    console.error('Error adding to cart:', err)
     toast.error(err.response?.data?.message || 'Failed to add to cart')
   } finally {
     addingToCart.value = false
@@ -503,7 +501,7 @@ const buyNow = async () => {
 }
 
 const openImageModal = () => {
-  console.log('Open image modal')
+  // console.log('Open image modal')
 }
 
 const isUserOnline = (userId) => {

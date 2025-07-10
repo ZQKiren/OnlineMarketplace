@@ -73,9 +73,6 @@ async function bootstrap() {
   
   // ✅ FIX: Enhanced startup logs
   console.log(`✅ Application is running on: http://localhost:${port}/api/v1`);
-  console.log(`💬 Socket.IO chat: ws://localhost:${port}/chat`);
-  console.log(`🔑 JWT_SECRET configured: ${process.env.JWT_SECRET ? 'YES' : 'NO'}`);
-  console.log(`🌐 CORS origins:`, allowedOrigins);
 }
 
 bootstrap().catch((error) => {

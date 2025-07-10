@@ -250,7 +250,6 @@ export default {
       if (loading.value) return
       
       loading.value = true
-      console.log('💬 ChatWidget: Opening chat for product:', props.product.id)
       
       try {
         // ✅ OPTIMIZED: Use direct API call instead of store for faster response
@@ -261,8 +260,6 @@ export default {
         
         const chat = response.data
         currentChat.value = chat
-        
-        console.log('✅ ChatWidget: Chat created:', chat.id)
         
         // Open chat immediately for better UX
         isOpen.value = true
@@ -276,7 +273,6 @@ export default {
         await loadMessages()
         
       } catch (error) {
-        console.error('❌ ChatWidget: Error opening chat:', error)
         
         // ✅ IMPROVED: Better error handling
         if (error.response?.status === 400) {
@@ -298,14 +294,12 @@ export default {
       
       isInitialLoading.value = true
       try {
-        console.log('📨 ChatWidget: Loading messages for chat:', currentChat.value.id)
         
         const response = await chatService.getChatMessages(currentChat.value.id)
         const messages = response.data.messages || response.data || []
         
         // Store locally for better performance
         localMessages.value = messages
-        console.log('✅ ChatWidget: Messages loaded:', messages.length)
         
         // Scroll to bottom
         await nextTick()
@@ -346,12 +340,9 @@ export default {
       scrollToBottom()
 
       try {
-        console.log('📤 ChatWidget: Sending message:', content)
         
         const response = await chatService.sendMessage(currentChat.value.id, content)
         const sentMessage = response.data
-        
-        console.log('✅ ChatWidget: Message sent:', sentMessage.id)
         
         // Replace temp message with real message
         const tempIndex = localMessages.value.findIndex(m => m.id === tempMessageId)
@@ -441,11 +432,11 @@ export default {
     
     // Lifecycle
     onMounted(() => {
-      console.log('🔧 ChatWidget: Mounted for product:', props.product.id)
+      
     })
     
     onUnmounted(() => {
-      console.log('🔧 ChatWidget: Unmounted')
+      
       if (scrollTimeout) clearTimeout(scrollTimeout)
       if (typingTimeout.value) clearTimeout(typingTimeout.value)
       closeChat()

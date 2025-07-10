@@ -120,12 +120,7 @@
 
           <div class="terms-wrapper">
             <label class="terms-checkbox">
-              <input 
-                type="checkbox" 
-                v-model="form.agreeTerms"
-                :class="{ error: errors.agreeTerms }"
-              >
-              <span class="checkmark"></span>
+              <input type="checkbox" v-model="form.agreeTerms" :class="{ error: errors.agreeTerms }" class="filled-in" />
               <span class="terms-text">
                 I agree to the 
                 <a href="/terms" target="_blank">Terms of Service</a> 

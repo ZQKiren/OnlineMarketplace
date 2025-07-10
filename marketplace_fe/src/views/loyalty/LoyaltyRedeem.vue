@@ -502,7 +502,6 @@ const confirmRedemption = async () => {
     await loyaltyStore.fetchRedemptions()
     
   } catch (error) {
-    console.error('Error redeeming points:', error)
     toast.error('Failed to redeem points. Please try again.')
   } finally {
     redeeming.value = false

@@ -23,9 +23,7 @@ export class RecommendationsService {
         await this.updateUserPreferences(userId, productId);
       }
 
-      console.log('✅ Product view tracked');
     } catch (error) {
-      console.error('❌ Error tracking product view:', error);
       throw error;
     }
   }
@@ -59,9 +57,7 @@ export class RecommendationsService {
         },
       });
 
-      console.log('✅ User preferences updated');
     } catch (error) {
-      console.error('❌ Error updating preferences:', error);
     }
   }
 
@@ -140,10 +136,8 @@ export class RecommendationsService {
         viewCount: product._count.views,
       }));
 
-      console.log('✅ Personalized recommendations generated');
       return recommendationsWithRating;
     } catch (error) {
-      console.error('❌ Error getting personalized recommendations:', error);
       return await this.getPopularProducts(limit);
     }
   }
@@ -199,10 +193,8 @@ export class RecommendationsService {
         viewCount: product._count.views,
       }));
 
-      console.log('✅ Similar products found');
       return productsWithRating;
     } catch (error) {
-      console.error('❌ Error getting similar products:', error);
       return [];
     }
   }
@@ -247,7 +239,6 @@ export class RecommendationsService {
 
       return productsWithRating;
     } catch (error) {
-      console.error('❌ Error getting popular products:', error);
       return [];
     }
   }
@@ -307,7 +298,6 @@ export class RecommendationsService {
 
       return productsWithRating;
     } catch (error) {
-      console.error('❌ Error getting trending products:', error);
       return [];
     }
   }
@@ -325,7 +315,6 @@ export class RecommendationsService {
         orderBy: { score: 'desc' },
       });
     } catch (error) {
-      console.error('❌ Error getting user preferences:', error);
       return [];
     }
   }
@@ -359,7 +348,6 @@ export class RecommendationsService {
 
       return preference;
     } catch (error) {
-      console.error('❌ Error updating user preference:', error);
       throw error;
     }
   }

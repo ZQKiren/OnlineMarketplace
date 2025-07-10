@@ -281,8 +281,7 @@ const handleSubmit = async () => {
     
     router.push('/my-products')
   } catch (error) {
-    console.error('Error saving product:', error.response?.data || error.message)
-    
+    // XÓA console.error không cần thiết
     // Show more detailed error message
     if (error.response?.data?.message) {
       if (Array.isArray(error.response.data.message)) {
@@ -320,7 +319,7 @@ const fetchProduct = async () => {
     
     imagePreview.value = (product.images || []).map(url => ({ url }))
   } catch (error) {
-    console.error('Error fetching product:', error)
+    // XÓA console.error không cần thiết
     toast.error('Product not found')
     router.push('/my-products')
   }

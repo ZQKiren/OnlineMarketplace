@@ -14,12 +14,6 @@ export class NotificationsService {
   async create(createNotificationDto: CreateNotificationDto) {
     const { targetUsers, isGlobal, ...notificationData } = createNotificationDto;
 
-    console.log('🔍 Creating notification with data:', {
-      ...notificationData,
-      targetUsers,
-      isGlobal
-    });
-
     // Validate logic
     if (isGlobal && targetUsers?.length) {
       throw new BadRequestException('Cannot specify targetUsers for global notifications');
@@ -33,14 +27,12 @@ export class NotificationsService {
 
     if (!isGlobal && targetUsers?.length) {
       try {
-        console.log('🔍 Processing target users:', targetUsers);
         
         // Check if targetUsers contains emails or user IDs
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const hasEmails = targetUsers.some(item => emailPattern.test(item));
         
         if (hasEmails) {
-          console.log('📧 Converting emails to user IDs...');
           
           // Convert emails to user IDs
           const users = await this.prisma.user.findMany({
@@ -56,8 +48,6 @@ export class NotificationsService {
             }
           });
           
-          console.log('👥 Found users:', users);
-          
           if (users.length === 0) {
             throw new BadRequestException('No users found with the provided emails');
           }
@@ -72,7 +62,6 @@ export class NotificationsService {
           
           processedTargetUsers = users.map(user => user.id);
         } else {
-          console.log('🆔 Using provided user IDs...');
           
           // Validate that all provided IDs exist
           const users = await this.prisma.user.findMany({
@@ -88,8 +77,6 @@ export class NotificationsService {
             }
           });
           
-          console.log('👥 Found users by ID:', users);
-          
           if (users.length === 0) {
             throw new BadRequestException('No users found with the provided IDs');
           }
@@ -102,8 +89,6 @@ export class NotificationsService {
           
           processedTargetUsers = users.map(user => user.id);
         }
-        
-        console.log('✅ Processed target users:', processedTargetUsers);
         
       } catch (error) {
         console.error('❌ Error processing target users:', error);
@@ -121,11 +106,8 @@ export class NotificationsService {
         },
       });
 
-      console.log('✅ Notification created:', notification.id);
-
       // Create notification reads for target users
       if (isGlobal) {
-        console.log(`📢 Global notification created: ${notification.title}`);
       } else {
         // Create reads for specific users
         const reads = processedTargetUsers.map(userId => ({
@@ -138,13 +120,11 @@ export class NotificationsService {
           skipDuplicates: true,
         });
 
-        console.log(`📬 Notification sent to ${processedTargetUsers.length} users: ${notification.title}`);
       }
 
       // ✅ Send real-time notification
       try {
         await this.sendRealTimeNotification(notification, processedTargetUsers);
-        console.log(`🚀 Real-time notification sent successfully`);
       } catch (error) {
         console.error(`❌ Failed to send real-time notification:`, error);
         // Don't throw here, notification was created successfully
@@ -279,7 +259,6 @@ export class NotificationsService {
       console.error(`❌ Failed to send read status update:`, error);
     }
 
-    console.log(`✅ User ${userId} marked notification ${notificationId} as read`);
     return readRecord;
   }
 
@@ -331,7 +310,6 @@ export class NotificationsService {
       console.error(`❌ Failed to send unread count update:`, error);
     }
 
-    console.log(`✅ User ${userId} marked all notifications as read`);
     return { message: 'All notifications marked as read' };
   }
 
@@ -440,7 +418,6 @@ export class NotificationsService {
       where: { id },
     });
 
-    console.log(`🗑️ Notification deleted: ${notification.title}`);
     return { message: 'Notification deleted successfully' };
   }
 
@@ -460,11 +437,8 @@ export class NotificationsService {
       },
     };
 
-    console.log('🧪 Creating test notification:', testNotification);
-    
     try {
       const result = await this.create(testNotification);
-      console.log('✅ Test notification created successfully:', result.id);
       return result;
     } catch (error) {
       console.error('❌ Failed to create test notification:', error);
@@ -474,22 +448,13 @@ export class NotificationsService {
 
   // Helper method for real-time notifications
   private async sendRealTimeNotification(notification: any, targetUsers?: string[]) {
-    console.log(`🚀 Sending real-time notification...`, {
-      id: notification.id,
-      title: notification.title,
-      isGlobal: notification.isGlobal,
-      targetUsers: targetUsers?.length || 0
-    });
-
     try {
       if (notification.isGlobal) {
         // Send to all connected users
         const sentCount = this.notificationGateway.sendGlobalNotification(notification);
-        console.log(`📢 Global notification sent to ${sentCount} users`);
       } else if (targetUsers && targetUsers.length > 0) {
         // Send to specific users
         const sentCount = this.notificationGateway.sendToUsers(targetUsers, notification);
-        console.log(`📨 Notification sent to ${sentCount}/${targetUsers.length} users`);
         
         // Update unread count for each target user
         for (const userId of targetUsers) {

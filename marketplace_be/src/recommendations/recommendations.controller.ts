@@ -40,7 +40,6 @@ export class RecommendationsController {
         message: 'Product view tracked successfully',
       };
     } catch (error) {
-      console.error('❌ Error tracking product view:', error);
       throw error;
     }
   }
@@ -65,7 +64,6 @@ export class RecommendationsController {
         message: 'Personalized recommendations retrieved successfully',
       };
     } catch (error) {
-      console.error('❌ Error getting personalized recommendations:', error);
       throw error;
     }
   }
@@ -88,7 +86,6 @@ export class RecommendationsController {
         message: 'Similar products retrieved successfully',
       };
     } catch (error) {
-      console.error('❌ Error getting similar products:', error);
       throw error;
     }
   }
@@ -105,7 +102,6 @@ export class RecommendationsController {
         message: 'Popular products retrieved successfully',
       };
     } catch (error) {
-      console.error('❌ Error getting popular products:', error);
       throw error;
     }
   }
@@ -122,7 +118,6 @@ export class RecommendationsController {
         message: 'Trending products retrieved successfully',
       };
     } catch (error) {
-      console.error('❌ Error getting trending products:', error);
       throw error;
     }
   }
@@ -141,7 +136,6 @@ export class RecommendationsController {
         message: 'User preferences retrieved successfully',
       };
     } catch (error) {
-      console.error('❌ Error getting user preferences:', error);
       throw error;
     }
   }
@@ -177,7 +171,6 @@ export class RecommendationsController {
         message: 'User preference updated successfully',
       };
     } catch (error) {
-      console.error('❌ Error updating user preference:', error);
       throw error;
     }
   }

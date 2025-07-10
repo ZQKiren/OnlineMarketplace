@@ -29,19 +29,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   private readonly logger = new Logger(JwtAuthGuard.name);
 
   canActivate(context: ExecutionContext) {
-    // Add logging to debug
-    this.logger.log('JwtAuthGuard - canActivate called');
     return super.canActivate(context);
   }
 
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
-    this.logger.log('JwtAuthGuard - handleRequest called');
-    this.logger.log('User from JWT:', user);
-    this.logger.log('Error from JWT:', err);
-    this.logger.log('Info from JWT:', info);
-
     if (err || !user) {
-      this.logger.error('JWT Authentication failed:', err || 'No user found');
       throw err || new UnauthorizedException('Invalid token');
     }
 

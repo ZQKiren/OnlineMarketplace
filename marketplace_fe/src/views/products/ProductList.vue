@@ -521,8 +521,6 @@ const fetchProducts = async () => {
       params.sort = sortBy.value
     }
     
-    console.log('API params:', params)
-    
     const response = await productService.getProducts(params)
     products.value = response.data.data
     totalPages.value = response.data.meta.totalPages
@@ -532,7 +530,6 @@ const fetchProducts = async () => {
     updateURL()
     
   } catch (err) {
-    console.error('Error fetching products:', err)
     error.value = err.response?.data?.message || 'Failed to load products. Please try again.'
     products.value = []
     totalResults.value = 0

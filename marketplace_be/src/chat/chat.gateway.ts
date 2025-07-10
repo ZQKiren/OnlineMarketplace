@@ -46,7 +46,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: AuthenticatedSocket) {
     try {
       // Authentication will be handled by WsJwtGuard in message handlers
-      console.log(`Client connected: ${client.id}`);
     } catch (error) {
       console.error('Connection error:', error);
       client.disconnect();
@@ -54,8 +53,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleDisconnect(client: AuthenticatedSocket) {
-    console.log(`Client disconnected: ${client.id}`);
-    
     if (client.user) {
       this.connectedUsers.delete(client.user.id);
       await this.chatService.updateUserOnlineStatus(client.user.id, false);
@@ -110,11 +107,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.join(`chat:${data.chatId}`);
       client.emit('joined-chat', { chatId: data.chatId });
       
-      if (client.user) {
-        console.log(`User ${client.user.id} joined chat ${data.chatId}`);
-      } else {
-        console.log(`Unknown user joined chat ${data.chatId}`);
-      }
     } catch (error) {
       client.emit('error', { message: 'Cannot join chat' });
     }

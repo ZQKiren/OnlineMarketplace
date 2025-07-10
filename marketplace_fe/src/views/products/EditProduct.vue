@@ -293,7 +293,6 @@ const fetchProduct = async () => {
       M.FormSelect.init(elems)
     }, 100)
   } catch (error) {
-    console.error('Error fetching product:', error)
     toast.error('Product not found')
     router.push('/my-products')
   } finally {
@@ -356,7 +355,6 @@ const handleSubmit = async () => {
     toast.success('Product updated successfully!')
     router.push('/my-products')
   } catch (error) {
-    console.error('Error updating product:', error)
     toast.error('Failed to update product')
   } finally {
     submitting.value = false

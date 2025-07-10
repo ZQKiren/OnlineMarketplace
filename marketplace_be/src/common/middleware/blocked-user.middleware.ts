@@ -38,8 +38,6 @@ export class BlockedUserMiddleware implements NestMiddleware {
           });
 
           if (user?.isBlocked) {
-            console.log('🚫 Middleware: Blocked user attempted access:', user.email);
-            
             // Send specific blocked user response with special flag
             return res.status(403).json({
               statusCode: 403,
@@ -55,7 +53,6 @@ export class BlockedUserMiddleware implements NestMiddleware {
         }
       } catch (error) {
         // Invalid or expired token - let it pass to be handled by guards
-        console.log('⚠️ Middleware: Invalid/expired token, passing to guards');
       }
     }
     

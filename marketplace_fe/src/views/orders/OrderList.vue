@@ -67,6 +67,7 @@
               <img 
                 :src="item.product.images[0] || '/placeholder.jpg'" 
                 :alt="item.product.name"
+                loading="lazy"
               >
               <div class="item-details">
                 <p class="item-name">{{ item.product.name }}</p>
@@ -92,6 +93,19 @@
           </div>
         </div>
       </div>
+      <div v-if="meta.totalPages > 1" class="pagination-section">
+        <ul class="pagination">
+          <li :class="{ disabled: page === 1 }">
+            <a @click="goToPage(page - 1)">&laquo;</a>
+          </li>
+          <li v-for="p in meta.totalPages" :key="p" :class="{ active: p === page }">
+            <a @click="goToPage(p)">{{ p }}</a>
+          </li>
+          <li :class="{ disabled: page === meta.totalPages }">
+            <a @click="goToPage(page + 1)">&raquo;</a>
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
 </template>
@@ -104,25 +118,36 @@ import { formatDate, formatStatus } from '@/utils/formatters'
 const orders = ref([])
 const loading = ref(false)
 const statusFilter = ref('')
+const page = ref(1)
+const limit = ref(5)
+const meta = ref({ total: 0, totalPages: 1 })
 
 const fetchOrders = async () => {
   loading.value = true
-  
   try {
-    const params = statusFilter.value ? { status: statusFilter.value } : {}
+    const params = {
+      ...(statusFilter.value ? { status: statusFilter.value } : {}),
+      page: page.value,
+      limit: limit.value
+    }
     const response = await orderService.getUserOrders(params)
     orders.value = response.data
+    meta.value = response.meta || { total: response.data.length, totalPages: 1, page: 1, limit: limit.value }
   } catch (error) {
-    console.error('Error fetching orders:', error)
+    // XÓA console.error không cần thiết
   } finally {
     loading.value = false
   }
 }
 
+const goToPage = (p) => {
+  if (p < 1 || p > meta.value.totalPages) return
+  page.value = p
+  fetchOrders()
+}
+
 onMounted(() => {
   fetchOrders()
-  
-  // Initialize select
   const elems = document.querySelectorAll('select')
   M.FormSelect.init(elems)
 })

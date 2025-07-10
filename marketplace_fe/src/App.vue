@@ -51,7 +51,6 @@ onMounted(async () => {
         // Fetch initial notification data
         await notificationStore.fetchUnreadCount()
         
-        console.log('✅ Notification system initialized')
       } catch (error) {
         console.error('❌ Error initializing notifications:', error)
       }

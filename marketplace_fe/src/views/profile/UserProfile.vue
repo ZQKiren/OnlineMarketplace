@@ -511,7 +511,6 @@ const handleAvatarChange = async (event) => {
     toast.success('Avatar updated successfully!')
     await authStore.fetchProfile()
   } catch (error) {
-    console.error('Error uploading avatar:', error)
     toast.error('Failed to upload avatar. Please try again.')
   } finally {
     uploadingAvatar.value = false
@@ -530,7 +529,6 @@ const updateProfile = async () => {
     toast.success('Profile updated successfully!')
     await authStore.fetchProfile()
   } catch (error) {
-    console.error('Error updating profile:', error)
     toast.error('Failed to update profile. Please try again.')
   } finally {
     updating.value = false
@@ -553,7 +551,6 @@ const changePassword = async () => {
     toast.success('Password changed successfully!')
     resetPasswordForm()
   } catch (error) {
-    console.error('Error changing password:', error)
     toast.error('Failed to change password. Please check your current password.')
   } finally {
     changingPassword.value = false
@@ -647,7 +644,7 @@ onMounted(async () => {
     try {
       await authStore.fetchProfile()
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      // XÓA console.error không cần thiết
     }
   }
 
@@ -655,7 +652,7 @@ onMounted(async () => {
   try {
     await loyaltyStore.initialize()
   } catch (error) {
-    console.error('Error initializing loyalty store:', error)
+    // XÓA console.error không cần thiết
   }
 
   // Initialize Materialize
@@ -709,7 +706,7 @@ onMounted(async () => {
     try {
       await authStore.fetchProfile()
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      // XÓA console.error không cần thiết
     }
   }
   
@@ -717,7 +714,7 @@ onMounted(async () => {
   try {
     await loyaltyStore.initialize()
   } catch (error) {
-    console.error('Error initializing loyalty store:', error)
+    // XÓA console.error không cần thiết
   }
   
   // Initialize Materialize and update fields
