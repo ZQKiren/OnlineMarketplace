@@ -339,7 +339,6 @@
             
             <div v-else class="products-list">
               <div v-for="(product, index) in stats.topProducts.slice(0, 5)" :key="product.id" class="product-item">
-                <div class="product-rank">{{ index + 1 }}</div>
                 <div class="product-image">
                   <img :src="product.images?.[0] || '/placeholder.jpg'" :alt="product.name" @error="handleImageError">
                 </div>
@@ -1356,19 +1355,6 @@ $gradient-purple: linear-gradient(135deg, #FDBB2D 0%, #22C1C3 100%);
   padding: 1rem;
   background: #F9FAFB;
   border-radius: 12px;
-  
-  .product-rank {
-    width: 32px;
-    height: 32px;
-    background: $primary;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.9rem;
-  }
   
   .product-image {
     width: 50px;

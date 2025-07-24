@@ -299,6 +299,9 @@ onMounted(async () => {
     }
     
     .card-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       padding: 40px 20px 30px;
       
       .category-icon {
@@ -322,19 +325,18 @@ onMounted(async () => {
     }
     
     .card-action {
+      display: flex;
+      justify-content: center;
+      align-items: center;
       padding: 20px;
-      
-      .category-btn {
-        color: #1976d2;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-        
-        &:hover {
-          background: rgba(25, 118, 210, 0.1);
-          color: #1565c0;
-        }
-      }
+      width: 100%; // Đảm bảo chiếm toàn bộ chiều rộng
+    }
+    .category-btn {
+      display: inline-block;
+      min-width: 100px;
+      text-align: center;
+      margin: 0 0 0 25px; // Dịch phải nhẹ
+      width: auto;
     }
     
     &:hover .category-icon {

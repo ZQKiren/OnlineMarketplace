@@ -36,7 +36,6 @@
                 :class="{ error: errors.name }"
                 @input="clearFieldError('name')"
                 placeholder="Enter your full name"
-                required
               >
             </div>
             <span v-if="errors.name" class="error-text">{{ errors.name }}</span>
@@ -46,12 +45,11 @@
             <div class="input-wrapper">
               <Mail class="input-icon" />
               <input 
-                type="email" 
+                type="text" 
                 v-model="form.email"
                 :class="{ error: errors.email }"
                 @input="clearFieldError('email')"
                 placeholder="Enter your email"
-                required
               >
             </div>
             <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
@@ -80,7 +78,6 @@
                 :class="{ error: errors.password }"
                 @input="clearFieldError('password')"
                 placeholder="Create a password"
-                required
               >
               <button 
                 type="button" 
@@ -104,7 +101,6 @@
                 :class="{ error: errors.confirmPassword }"
                 @input="clearFieldError('confirmPassword')"
                 placeholder="Confirm your password"
-                required
               >
               <button 
                 type="button" 
@@ -536,8 +532,10 @@ const handleRegister = async () => {
   align-items: center;
   background: #f8f9fa;
   border: 2px solid #e9ecef;
-  border-radius: 12px;
+  border-radius: 8px;
   transition: all 0.3s ease;
+  min-height: 38px;
+  padding: 0 10px;
   
   &:focus-within {
     border-color: $primary-color;
@@ -547,19 +545,24 @@ const handleRegister = async () => {
   
   .input-icon {
     color: #6c757d;
-    margin: 0 15px;
-    width: 20px;
-    height: 20px;
+    margin: 0 8px;
+    width: 18px;
+    height: 18px;
   }
   
   input {
     flex: 1;
     border: none;
+    border-bottom: 1.5px solid #bdbdbd;
+    border-radius: 0;
+    transition: border-color 0.2s;
+    box-shadow: none;
     background: transparent;
-    padding: 16px 0;
-    font-size: 16px;
+    padding: 10px 0;
+    font-size: 15px;
     color: #333;
     outline: none;
+    min-height: 36px;
     
     &::placeholder {
       color: #6c757d;
@@ -567,6 +570,12 @@ const handleRegister = async () => {
     
     &.error {
       color: #c62828;
+    }
+
+    &:focus {
+      border-bottom: 2px solid #1976d2;
+      outline: none;
+      box-shadow: none;
     }
   }
   

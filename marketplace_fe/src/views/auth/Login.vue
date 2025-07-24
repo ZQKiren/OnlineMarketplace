@@ -36,12 +36,11 @@
             <div class="input-wrapper">
               <Mail class="input-icon" />
               <input 
-                type="email" 
+                type="text" 
                 v-model="form.email"
                 :class="{ error: errors.email }"
                 @input="clearFieldError('email')"
                 placeholder="Enter your email"
-                required
               >
             </div>
             <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
@@ -56,7 +55,6 @@
                 :class="{ error: errors.password }"
                 @input="clearFieldError('password')"
                 placeholder="Enter your password"
-                required
               >
               <button 
                 type="button" 
@@ -222,26 +220,20 @@ const validateForm = () => {
 
 const handleLogin = async () => {
   if (!validateForm()) {
-    toast.error('Please check your information!')
+    // Không hiện toast lỗi nữa
     return
   }
-  
   loading.value = true
   clearAllErrors()
-  
   try {
     await authStore.login(form.value)
-    
     toast.success('Welcome back!')
-    
     const redirectTo = route.query.redirect || '/'
     router.push(redirectTo)
   } catch (error) {
-    
     if (error.response) {
       const status = error.response.status
       const data = error.response.data
-      
       switch (status) {
         case 401:
           errorMessage.value = 'Invalid email or password!'
@@ -250,10 +242,9 @@ const handleLogin = async () => {
           errorMessage.value = 'Account not found!'
           break
         case 403:
-          // ✅ Enhanced blocked user handling
           if (data.blocked || (data.message && data.message.toLowerCase().includes('blocked'))) {
             isBlockedRedirect.value = true
-            errorMessage.value = '' // Clear error message as we show blocked alert
+            errorMessage.value = ''
             toast.error('Your account has been blocked. Please contact support.')
           } else {
             errorMessage.value = data.message || 'Account is locked or not activated!'
@@ -281,11 +272,7 @@ const handleLogin = async () => {
     } else {
       errorMessage.value = error.message || 'An unexpected error occurred!'
     }
-    
-    // ✅ Only show toast error if not a blocked user (blocked users get special alert)
-    if (!isBlockedRedirect.value) {
-      toast.error('Login failed!')
-    }
+    // Chỉ hiện toast nếu là blocked user (403), còn lại không hiện toast lỗi nữa
   } finally {
     loading.value = false
   }
@@ -454,8 +441,10 @@ const handleLogin = async () => {
   align-items: center;
   background: #f8f9fa;
   border: 2px solid #e9ecef;
-  border-radius: 12px;
+  border-radius: 8px;
   transition: all 0.3s ease;
+  min-height: 38px;
+  padding: 0 10px;
   
   &:focus-within {
     border-color: $primary-color;
@@ -465,19 +454,24 @@ const handleLogin = async () => {
   
   .input-icon {
     color: #6c757d;
-    margin: 0 15px;
-    width: 20px;
-    height: 20px;
+    margin: 0 8px;
+    width: 18px;
+    height: 18px;
   }
   
   input {
     flex: 1;
     border: none;
+    border-bottom: 1.5px solid #bdbdbd;
+    border-radius: 0;
+    transition: border-color 0.2s;
+    box-shadow: none;
     background: transparent;
-    padding: 18px 0;
-    font-size: 16px;
+    padding: 10px 0;
+    font-size: 15px;
     color: #333;
     outline: none;
+    min-height: 36px;
     
     &::placeholder {
       color: #6c757d;
@@ -485,6 +479,11 @@ const handleLogin = async () => {
     
     &.error {
       color: #c62828;
+    }
+    &:focus {
+      border-bottom: 2px solid #1976d2;
+      outline: none;
+      box-shadow: none;
     }
   }
   
@@ -610,12 +609,16 @@ const handleLogin = async () => {
   
   .loading-spinner {
     display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 2px solid #ffffff;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #e0e0e0;
     border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 1s ease-in-out infinite;
+    border-top: 2px solid #1976d2;
+    border-right: 2px solid #e0e0e0;
+    border-bottom: 2px solid #e0e0e0;
+    border-left: 2px solid #e0e0e0;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
   }
 }
 
@@ -730,9 +733,8 @@ const handleLogin = async () => {
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 @keyframes float {

@@ -434,6 +434,12 @@ const addToCart = async () => {
 }
 
 .product-content {
+  .product-header, .category-tag, .rating, .stock-info, .seller-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
   .product-header {
     display: flex;
     justify-content: space-between;

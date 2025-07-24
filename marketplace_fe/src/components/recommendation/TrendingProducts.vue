@@ -127,7 +127,7 @@ export default {
       i {
         color: #ff5722;
         vertical-align: middle;
-        margin-right: 8px;
+        margin-right: 4px;
       }
     }
     
@@ -227,6 +227,7 @@ export default {
       .rank {
         font-size: 12px;
         font-weight: 700;
+        display: none;
       }
     }
     

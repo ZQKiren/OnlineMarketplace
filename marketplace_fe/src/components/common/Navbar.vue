@@ -3,7 +3,7 @@
     <div class="nav-wrapper">
       <div class="container">
         <!-- Logo với z-index cao hơn -->
-        <router-link to="/" class="brand-logo">
+        <router-link to="/" class="brand-logo" @click="handleLogoClick">
           <ShoppingCart class="brand-icon" />
           <span class="brand-text">Marketplace</span>
         </router-link>
@@ -360,6 +360,10 @@ const goToChat = () => {
   hideChatNotification()
   router.push('/chat')
 }
+
+const handleLogoClick = (event) => {
+  event.currentTarget.blur();
+};
 
 const handleAvatarError = (event) => {
   event.target.src = '/placeholder-avatar.svg'
@@ -1035,5 +1039,48 @@ onUnmounted(() => {
   margin-right: 8px;
   border: 1.5px solid #e3eaf5;
   background: #fff;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: color 0.2s, transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  outline: none;
+  border: none;
+}
+@media (max-width: 600px) {
+  .brand-logo {
+    max-width: 100%;
+    overflow: hidden;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+.brand-logo:focus, .brand-logo:active,
+button:focus, button:active,
+.nav-link:focus, .nav-link:active {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.brand-logo .brand-icon,
+.brand-logo .brand-text {
+  transition: color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.brand-logo:hover .brand-icon,
+.brand-logo:focus .brand-icon {
+  color: #ff9800 !important;
+  transform: none;
+  box-shadow: none;
+}
+.brand-logo:hover .brand-text,
+.brand-logo:focus .brand-text {
+  color: #ff9800 !important;
+  transform: none;
+  box-shadow: none;
 }
 </style>
